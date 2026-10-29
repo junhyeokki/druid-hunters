@@ -548,6 +548,7 @@ function sTone(t, type, f0, f1, dur, gain, delay) {
 }
 const SFX_DEF = {
   ui: t => sTone(t, 'triangle', 900, 600, 0.05, 0.05),
+  swing: (t, v) => sNoise(t, 0.13, 'bandpass', 600, 2600, 0.16 * v, 1.6),
   claw: (t, v) => { sNoise(t, 0.11, 'bandpass', 1400, 4200, 0.28 * v, 1.2); sTone(t, 'sawtooth', 260, 120, 0.07, 0.05 * v); },
   heavy: (t, v) => { sNoise(t, 0.16, 'bandpass', 700, 3000, 0.35 * v, 1); sTone(t, 'sine', 160, 50, 0.16, 0.35 * v); },
   hit: (t, v) => { sNoise(t, 0.07, 'lowpass', 1600, 300, 0.32 * v); sTone(t, 'sine', 150, 55, 0.09, 0.28 * v); },
@@ -572,7 +573,7 @@ const SFX_DEF = {
   levelup: (t, v) => { [523, 659, 784, 1047].forEach((f, i) => sTone(t, 'triangle', f, 0, 0.35, 0.1 * v, i * 0.08)); },
   start: (t, v) => { sTone(t, 'sine', 65, 40, 1.2, 0.3 * v); sNoise(t, 1, 'lowpass', 400, 60, 0.2 * v); },
 };
-const SFX_GAP = { hit: 0.035, claw: 0.05, coin: 0.035, flame: 0.09, zap: 0.04, kill: 0.04, bone: 0.05, spike: 0.06, crit: 0.04, hurt: 0.08, boom: 0.06 };
+const SFX_GAP = { swing: 0.05, hit: 0.035, claw: 0.05, coin: 0.035, flame: 0.09, zap: 0.04, kill: 0.04, bone: 0.05, spike: 0.06, crit: 0.04, hurt: 0.08, boom: 0.06 };
 function sfx(name, vol) {
   if (S.settings.sound === false || !SFX.ctx || SFX.ctx.state !== 'running') return;
   const t = SFX.ctx.currentTime; if (SFX.last[name] && t - SFX.last[name] < (SFX_GAP[name] || 0.02)) return; SFX.last[name] = t;
@@ -743,6 +744,7 @@ const SKILL = {
 function useSkill(i) {
   if (!B || B.ended || B.paused || !skillUnlocked(i, B.tech) || B.cds[i] > 0) return;
   const sk = TECH[B.tech].skills[i]; SKILL[sk.id]();
+  if (sk.id !== 'dash') { B.p.castPose = B.p.castMax = i === 2 ? 0.6 : 0.42; B.p.atkPose = 0; }
   let cd = sk.cd * (1 - B.stats.cdr); if (i === 2) cd *= (1 - B.stats.ultCdr);
   B.cds[i] = B.cdMax[i] = cd;
   if (B.tut && B.tutStep === 2) { B.tutStep = 3; B.tutT = 0; }
@@ -813,7 +815,7 @@ function update(dt) {
   const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
   p.mx = mx; p.my = my;
   if (B.tut) tutUpdate(dt, manual);
-  p.inv = Math.max(0, p.inv - dt); p.hurt = Math.max(0, p.hurt - dt); p.atkPose = Math.max(0, p.atkPose - dt); if (p.avatar > 0) p.avatar -= dt; if (p.shield > 0) p.shield -= dt;
+  p.inv = Math.max(0, p.inv - dt); p.hurt = Math.max(0, p.hurt - dt); p.atkPose = Math.max(0, p.atkPose - dt); p.castPose = Math.max(0, (p.castPose || 0) - dt); if (p.avatar > 0) p.avatar -= dt; if (p.shield > 0) p.shield -= dt;
   for (let i = 0; i < 3; i++) B.cds[i] = Math.max(0, B.cds[i] - dt);
   if (p.dash) {
     p.x += p.dash.dx * 1300 * dt; p.y += p.dash.dy * 1300 * dt; p.dash.t -= dt;
@@ -896,29 +898,40 @@ function playerAttack(dt) {
   if (!tgt) { p.atkT = 0.05; return; }
   const ang = Math.atan2(tgt.y - p.y, tgt.x - p.x); if (Math.hypot(p.mx, p.my) < 0.1) p.face = ang;
   p.atkT = A.cd; p.atkAng = ang;
+  if (B.tech === 'fire') {
+    for (const e of B.enemies) { if (e.dead) continue; const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy); if (d > range + e.r) continue; if (Math.abs(angDiff(Math.atan2(dy, dx), ang)) < 0.45 || d < e.r + p.r + 4) dealDamage(e, 0.22, { burn: true, quiet: true, color: '#ffb37a', force: 1.2 }); }
+    p.flameT = 0.2; p.flameAng = ang; p.flameRange = range; p.atkPose = p.atkMax = 0.14; sfx('flame'); return;
+  }
+  const cap = A.cd / (st.aspd * (av ? 2 : 1)) * 0.92;
+  let dur = B.tech === 'beast' ? 0.28 : B.tech === 'earth' ? 0.42 : 0.32, heavy = false, side = 1;
+  if (B.tech === 'beast') { p.combo = (p.combo + 1) % 3; heavy = p.combo === 0; side = p.combo % 2 ? 1 : -1; if (heavy) dur = 0.36; }
+  dur = Math.min(dur, cap); p.atkPose = p.atkMax = dur;
+  const tx = tgt.x, ty = tgt.y; sfx('swing', heavy ? 1 : 0.6);
+  later(dur * (B.tech === 'earth' ? 0.55 : 0.45), () => { if (!B.ended) strikeHit(ang, range, heavy, side, tgt, tx, ty); });
+}
+function strikeHit(ang, range, heavy, side, tgt, tx, ty) {
+  const p = B.p, st = B.stats, T = TECH[B.tech], av = p.avatar > 0;
   switch (B.tech) {
     case 'beast': {
-      p.combo = (p.combo + 1) % 3; const heavy = p.combo === 0, side = p.combo % 2 ? 1 : -1; let hits = 0;
-      for (const e of B.enemies) { if (e.dead) continue; const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy); if (d > range + e.r) continue; if (Math.abs(angDiff(Math.atan2(dy, dx), ang)) < 1.0 || d < e.r + p.r + 6) { dealDamage(e, heavy ? 1.6 : 1.0, { knock: heavy ? 60 : 25, force: heavy ? 1.6 : 1 }); hits++; } }
+      let hits = 0;
+      for (const e of B.enemies) { if (e.dead) continue; const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy); if (d > range + e.r + 8) continue; if (Math.abs(angDiff(Math.atan2(dy, dx), ang)) < 1.05 || d < e.r + p.r + 8) { dealDamage(e, heavy ? 1.6 : 1.0, { knock: heavy ? 60 : 25, force: heavy ? 1.6 : 1 }); hits++; } }
       addFx({ type: 'claw', x: p.x, y: p.y - 22, ang, r: range * (heavy ? 1.15 : 1), side, heavy, life: heavy ? 0.22 : 0.16, max: heavy ? 0.22 : 0.16, color: av ? '#ff6a3a' : T.color });
-      p.atkPose = p.atkMax = heavy ? 0.24 : 0.16; p.x += Math.cos(ang) * (heavy ? 10 : 5); p.y += Math.sin(ang) * (heavy ? 10 : 5);
-      sfx(heavy ? 'heavy' : 'claw'); if (heavy && hits) { hitStop(0.045); B.shake = Math.max(B.shake, 5); camKick(ang, 5); }
+      p.x += Math.cos(ang) * (heavy ? 10 : 5); p.y += Math.sin(ang) * (heavy ? 10 : 5);
+      sfx(heavy ? 'heavy' : 'claw'); if (heavy && hits) { hitStop(0.05); B.shake = Math.max(B.shake, 6); camKick(ang, 6); }
       break;
     }
     case 'earth': {
-      inRadius(tgt.x, tgt.y, 55).forEach(e => dealDamage(e, 1.3, { force: 1.3 }));
-      addFx({ type: 'spikes', x: tgt.x, y: tgt.y, r: 46, n: 7, life: 0.45, max: 0.45, color: '#a5c978' });
-      debrisBurst(tgt.x, tgt.y, 6, ['#3b352a', '#5a5040'], 'rock', 160, 300); smoke(tgt.x, tgt.y, 3, 'rgba(90,80,65,', 20); addDecal('crack', tgt.x, tgt.y, 40);
-      p.atkPose = p.atkMax = 0.22; B.shake = Math.max(B.shake, 3); sfx('spike', 0.8); break;
+      const x = tgt.dead ? tx : tgt.x, y = tgt.dead ? ty : tgt.y;
+      inRadius(x, y, 55).forEach(e => dealDamage(e, 1.3, { force: 1.3 }));
+      addFx({ type: 'spikes', x, y, r: 46, n: 7, life: 0.45, max: 0.45, color: '#a5c978' });
+      debrisBurst(x, y, 6, ['#3b352a', '#5a5040'], 'rock', 160, 300); smoke(x, y, 3, 'rgba(90,80,65,', 20); addDecal('crack', x, y, 40);
+      B.shake = Math.max(B.shake, 4); hitStop(0.02); sfx('spike', 0.8); break;
     }
     case 'spirit': {
-      let cur = tgt, mult = 0.9, px = p.x + Math.cos(ang) * 12, py = p.y - 50; const hit = new Set([tgt]), n = 2 + st.chain;
+      let cur = tgt.dead ? nearestEnemy(p.x, p.y, range + 20) : tgt; if (!cur) break;
+      let mult = 0.9, px = p.x + Math.cos(ang) * 30, py = p.y - 56; const hit = new Set([cur]), n = 2 + st.chain;
       for (let k = 0; k <= n && cur; k++) { dealDamage(cur, mult, { color: '#bfe3ff', spark: '#cfe8ff' }); boltFx(px, py, cur.x, cur.y - 14, T.color, 2.5, 0.17); px = cur.x; py = cur.y - 14; mult *= 0.85; let nx = null, nd = 160 * 160; for (const e of B.enemies) { if (hit.has(e) || e.dead) continue; const d = (e.x - px) ** 2 + (e.y - py) ** 2; if (d < nd) { nd = d; nx = e; } } cur = nx; if (nx) hit.add(nx); }
-      p.atkPose = p.atkMax = 0.2; sfx('zap'); break;
-    }
-    case 'fire': {
-      for (const e of B.enemies) { if (e.dead) continue; const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy); if (d > range + e.r) continue; if (Math.abs(angDiff(Math.atan2(dy, dx), ang)) < 0.45 || d < e.r + p.r + 4) dealDamage(e, 0.22, { burn: true, quiet: true, color: '#ffb37a', force: 1.2 }); }
-      p.flameT = 0.2; p.flameAng = ang; p.flameRange = range; p.atkPose = p.atkMax = 0.14; sfx('flame'); break;
+      sfx('zap'); break;
     }
   }
 }
@@ -943,11 +956,15 @@ function updEnemies(dt) {
     if (e.stun > 0) e.stun -= dt;
     else if (e.kind !== 'mob') bossAI(e, dt);
     else {
-      let sp = e.spd * (e.hitT > 0 ? 0.3 : 1);
-      if (e.type === 'shooter') { if (d < 190) sp = -e.spd * 0.6; else if (d < 260) sp = 0; e.shootT -= dt; if (e.shootT <= 0 && d < 430) { e.shootT = rand(2, 2.6); e.atkT = 0.3; eShoot(e.x, e.y - 20, Math.atan2(dy + 20, dx), 210, e.atk * 0.9); } }
+      let sp = e.spd * (e.hitT > 0 ? 0.3 : 1) * (e.atkT > 0 ? 0.15 : 1);
+      if (e.type === 'shooter') { if (d < 190) sp = -e.spd * 0.6; else if (d < 260) sp = 0; e.shootT -= dt; if (e.shootT <= 0 && d < 430) { e.shootT = rand(2, 2.6); e.atkT = e.atkMax = 0.5; e.shotPend = 0.3; } }
       e.x += dx / d * sp * dt; e.y += dy / d * sp * dt;
     }
-    if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r && e.hitCd <= 0) { e.hitCd = 0.7; e.atkT = 0.3; hurtPlayer(e.atk * (e.charge ? 2 : 1), e); }
+    if (e.shotPend > 0) { e.shotPend -= dt; if (e.shotPend <= 0) { eShoot(e.x, e.y - 24, Math.atan2(p.y - e.y + 4, p.x - e.x), 210, e.atk * 0.9); sfx('cast', 0.3); } }
+    const pd = Math.hypot(p.x - e.x, p.y - e.y);
+    if (e.charge) { if (pd < e.r + p.r && e.hitCd <= 0) { e.hitCd = 0.7; hurtPlayer(e.atk * 2, e); } }
+    else if (pd < e.r + p.r + 8 && e.hitCd <= 0 && e.atkT <= 0) { e.hitCd = 1.0; e.atkT = e.atkMax = e.kind === 'mob' ? 0.42 : 0.55; e.meleePend = e.atkMax * 0.55; }
+    if (e.meleePend > 0) { e.meleePend -= dt; if (e.meleePend <= 0 && !e.dead) { if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r + 26) { hurtPlayer(e.atk, e); sparkFx(p.x, p.y - 30, Math.atan2(p.y - e.y, p.x - e.x), '#ff9a7a', 6); } else sfx('swing', 0.3); } }
   }
   const a = B.enemies;
   for (let i = 0; i < a.length; i++) { const A = a[i]; if (A.dead) continue; for (let j = i + 1; j < a.length; j++) { const C = a[j]; if (C.dead) continue; const dx = C.x - A.x, dy = C.y - A.y, rr = A.r + C.r, d2 = dx * dx + dy * dy; if (d2 < rr * rr && d2 > 0.01) { const d = Math.sqrt(d2), o = (rr - d) / 2, ux = dx / d, uy = dy / d, wa = A.kind === 'mob' ? 1 : 0.05, wb = C.kind === 'mob' ? 1 : 0.05; A.x -= ux * o * wa; A.y -= uy * o * wa; C.x += ux * o * wb; C.y += uy * o * wb; } } }
@@ -1089,7 +1106,7 @@ async function loadAssets() {
   }));
 }
 const SPRITE_H = { grunt: 64, runner: 56, tank: 84, shooter: 66 };
-const PLAYER_SPRITE = { beast: 's_beast', earth: 's_earth', spirit: 's_spirit', fire: 's_fire' };
+const PLAYER_SPRITE = { beast: 'a_beast', earth: 'a_earth', spirit: 'w_spirit', fire: 'a_fire' };
 const PAT = {};
 function tilePattern(c, theme) {
   if (PAT[theme]) return PAT[theme];
@@ -1099,25 +1116,32 @@ function tilePattern(c, theme) {
 // 발 위치(x,y) 기준으로 스프라이트를 그림. rot: 회전, sx/sy: 늘림·찌그러짐
 function drawSprite(c, key, x, y, h, flip, o) {
   const im = IMG[key]; if (!im || !im.naturalWidth) return false; o = o || {};
-  const w = h * im.naturalWidth / im.naturalHeight;
+  const w = h * im.naturalWidth / im.naturalHeight, ax = o.ax == null ? 0.5 : o.ax;
   c.save(); c.translate(x, y); if (o.rot) c.rotate(o.rot); c.scale((flip ? -1 : 1) * (o.sx || 1), o.sy || 1);
   if (o.alpha != null) c.globalAlpha = o.alpha;
   if (o.glow) { c.shadowColor = o.glow; c.shadowBlur = o.blur || 18; }
   if (o.dark) c.filter = o.dark;
-  c.drawImage(im, -w / 2, -h, w, h); c.shadowBlur = 0; c.filter = 'none';
-  if (o.flash) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = o.flash; c.drawImage(im, -w / 2, -h, w, h); if (o.flash > 0.4) c.drawImage(im, -w / 2, -h, w, h); }
+  c.drawImage(im, -w * ax, -h, w, h); c.shadowBlur = 0; c.filter = 'none';
+  if (o.flash) { c.globalCompositeOperation = 'lighter'; c.globalAlpha = o.flash; c.drawImage(im, -w * ax, -h, w, h); if (o.flash > 0.4) c.drawImage(im, -w * ax, -h, w, h); }
   c.restore(); return true;
 }
+// 시트(4프레임) 애니메이션: 발 위치 기준
+function drawFrame(c, sheet, idx, x, y, h, flip, o) {
+  const m = (window.ANIM || {})[sheet]; if (!m) return false; idx = clamp(idx | 0, 0, m.n - 1); o = Object.assign({}, o || {}); o.ax = m.ax[idx];
+  return drawSprite(c, sheet + '_' + idx, x, y, h * m.f, flip, o);
+}
+const animIdx = (left, max) => Math.min(3, Math.floor((1 - left / max) * 4));
 function drawPlayer(c, x, y, tech, face, t, o) {
   o = o || {}; const T = TECH[tech], big = o.avatar ? 1.45 : 1, h = 92 * big, p = o.p;
-  let ox = 0, oy = 0, rot = 0, sx = 1, sy = 1, bob = Math.sin(t * 2) * 1;
+  let ox = 0, oy = 0, rot = 0, sx = 1, sy = 1, bob = 0, sheet = 'w_' + tech, fi = 0, fdir = face;
   if (p) {
-    if (o.moving) { rot += Math.sin(p.walk) * 0.07; bob = Math.abs(Math.sin(p.walk)) * 5; sy = 1 - Math.abs(Math.cos(p.walk)) * 0.03; }
-    if (p.atkPose > 0) { const k = 1 - p.atkPose / p.atkMax, s = Math.sin(k * Math.PI), dir = Math.cos(p.atkAng) < 0 ? -1 : 1, lunge = tech === 'beast' ? 14 : tech === 'earth' ? 4 : 6;
-      ox += Math.cos(p.atkAng) * lunge * s; oy += Math.sin(p.atkAng) * lunge * 0.6 * s;
-      if (tech === 'earth') { sx += 0.14 * s; sy -= 0.12 * s; } else if (tech === 'spirit') { sy += 0.07 * s; sx -= 0.04 * s; rot -= dir * 0.08 * s; } else { sx += 0.1 * s; sy -= 0.06 * s; rot += dir * (tech === 'beast' ? 0.28 : 0.12) * s; } }
-    if (p.hurt > 0) { const k = p.hurt / 0.18; ox += Math.cos(p.hurtAng) * 9 * k; oy += Math.sin(p.hurtAng) * 6 * k; rot += (Math.cos(p.hurtAng) >= 0 ? 1 : -1) * 0.18 * k; }
-    if (p.dash) { rot += (Math.cos(p.face) >= 0 ? 1 : -1) * 0.35; sx = 1.15; sy = 0.9; }
+    if (p.castPose > 0) { sheet = 'c_' + tech; fi = animIdx(p.castPose, p.castMax); }
+    else if (p.dash) { sheet = 'a_' + tech; fi = 2; }
+    else if (tech === 'fire' && p.flameT > 0) { sheet = 'a_fire'; fi = 2; fdir = p.flameAng; }
+    else if (p.atkPose > 0) { sheet = 'a_' + tech; fi = animIdx(p.atkPose, p.atkMax); fdir = p.atkAng; const s = Math.sin((1 - p.atkPose / p.atkMax) * Math.PI); ox += Math.cos(p.atkAng) * (tech === 'beast' ? 10 : 4) * s; oy += Math.sin(p.atkAng) * 3 * s; }
+    else if (o.moving) { fi = Math.floor(p.walk / 1.4) % 4; rot += Math.sin(p.walk) * 0.025; }
+    else { sy = 1 + Math.sin(t * 2.4) * 0.012; }
+    if (p.hurt > 0) { const k = p.hurt / 0.18; ox += Math.cos(p.hurtAng) * 9 * k; oy += Math.sin(p.hurtAng) * 6 * k; rot += (Math.cos(p.hurtAng) >= 0 ? 1 : -1) * 0.12 * k; }
   }
   x += ox; y += oy;
   c.save();
@@ -1127,14 +1151,14 @@ function drawPlayer(c, x, y, tech, face, t, o) {
   c.globalCompositeOperation = 'source-over';
   c.fillStyle = 'rgba(0,0,0,.6)'; c.beginPath(); c.ellipse(x - ox * 0.5, y + 15 - oy * 0.5, 21 * big * (1 - bob * 0.02), 7 * big, 0, 0, TAU); c.fill();
   if (o.shield) { c.strokeStyle = 'rgba(30,24,16,.9)'; c.fillStyle = '#6f6a55'; c.lineWidth = 1.5; for (let k = 0; k < 12; k++) { const a = t * 1.4 + k / 12 * TAU, r = 34; c.save(); c.translate(x + Math.cos(a) * r, y + 6 + Math.sin(a) * r * 0.55); c.beginPath(); c.moveTo(-5, 0); c.lineTo(0, -16 - Math.sin(t * 6 + k) * 2); c.lineTo(5, 0); c.closePath(); c.fill(); c.stroke(); c.restore(); } }
-  const ok = drawSprite(c, PLAYER_SPRITE[tech], x, y + 17 - bob, h, Math.cos(face) < 0, { rot, sx, sy, glow: o.avatar ? 'rgba(255,50,30,.95)' : `rgba(${T.glow},.75)`, blur: o.avatar ? 26 : 9, flash: o.hurt ? 0.55 : 0, alpha: o.inv ? 0.65 : 1 });
+  const ok = drawFrame(c, sheet, fi, x, y + 17 - bob, h, Math.cos(fdir) < 0, { rot, sx, sy, glow: o.avatar ? 'rgba(255,50,30,.95)' : `rgba(${T.glow},.75)`, blur: o.avatar ? 26 : 9, flash: o.hurt ? 0.55 : 0, alpha: o.inv ? 0.65 : 1 });
   if (!ok) { c.fillStyle = '#18202c'; c.strokeStyle = T.color; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, 16 * big, 0, TAU); c.fill(); c.stroke(); }
   if (tech === 'spirit') { c.globalCompositeOperation = 'lighter'; for (let k = 0; k < 2; k++) { const a = t * 2.6 + k * Math.PI; c.fillStyle = 'rgba(190,225,255,.95)'; c.shadowColor = T.color; c.shadowBlur = 12; c.beginPath(); c.arc(x + Math.cos(a) * 26, y - 34 + Math.sin(a) * 9, 3.5, 0, TAU); c.fill(); } c.shadowBlur = 0; c.globalCompositeOperation = 'source-over'; }
   if (o.avatar && B && Math.random() < 0.6) addPart(x + rand(-22, 22), y - rand(10, 90), rand(-10, 10), -rand(40, 90), 0.5, rand(2, 4), pick(['#ff3a1a', '#ff7a3d']));
   if (tech === 'fire' && Math.random() < 0.35 && B) addPart(x + rand(-14, 14), y - rand(20, 60), rand(-10, 10), -rand(20, 50), 0.6, rand(1.5, 3), pick(['#ff7a3d', '#ffb347']));
   c.restore();
 }
-function enemyKey(e) { if (e.kind === 'boss') return B.raid ? 'b_forest' : 'b_' + B.theme; return 'm_' + B.theme + '_' + (e.kind === 'elite' ? 'tank' : e.type); }
+function enemyKey(e) { if (e.kind === 'boss') return 'x_' + (B.raid ? 'b_forest' : 'b_' + B.theme); return 'x_m_' + B.theme + '_' + (e.kind === 'elite' ? 'tank' : e.type); }
 function drawEnemy(c, e, th, t) {
   const p = B.p, h = e.kind === 'boss' ? 178 : e.kind === 'elite' ? 122 : SPRITE_H[e.type], feet = e.y + e.r * 0.7, flip = p.x < e.x;
   let ox = 0, oy = 0, rot = 0, sx = 1, sy = 1, alpha = 1;
@@ -1142,13 +1166,14 @@ function drawEnemy(c, e, th, t) {
   if (e.stun <= 0 && !e.casting) { rot += Math.sin(walk) * (e.kind === 'mob' ? 0.09 : 0.04); oy -= Math.abs(Math.sin(walk)) * (e.kind === 'mob' ? 3 : 2); }
   if (e.spawnT > 0) { const k = 1 - e.spawnT / 0.35; sy *= k; alpha = k; }
   if (e.hitT > 0) { const k = e.hitT / 0.14; ox += Math.cos(e.hitAng) * 7 * k; oy += Math.sin(e.hitAng) * 4 * k; rot += (Math.cos(e.hitAng) >= 0 ? 1 : -1) * 0.22 * k; sx *= 1 - 0.08 * k; sy *= 1 + 0.06 * k; }
-  if (e.atkT > 0) { const k = 1 - e.atkT / 0.3, s = Math.sin(k * Math.PI), a = Math.atan2(p.y - e.y, p.x - e.x), pre = k < 0.35 ? -0.5 : 1; ox += Math.cos(a) * 14 * s * pre; oy += Math.sin(a) * 8 * s * pre; sx *= 1 + 0.12 * s; sy *= 1 - 0.08 * s; rot += (Math.cos(a) >= 0 ? 1 : -1) * 0.2 * s; }
-  if (e.castPose > 0) { const k = 1 - e.castPose / e.castMax; const s = Math.sin(Math.min(1, k * 1.4) * Math.PI); sy *= 1 + 0.12 * s; sx *= 1 - 0.05 * s; ox += rand(-1.5, 1.5) * s; }
-  if (e.charge) { rot += (Math.cos(Math.atan2(e.charge.vy, e.charge.vx)) >= 0 ? 1 : -1) * 0.3; }
+  let fi = 3;
+  if (e.atkT > 0) { fi = animIdx(e.atkT, e.atkMax || 0.42); rot = 0; oy = 0; const a = Math.atan2(p.y - e.y, p.x - e.x), s = Math.sin((1 - e.atkT / (e.atkMax || 0.42)) * Math.PI); ox += Math.cos(a) * 6 * s; }
+  else if (e.castPose > 0) { fi = animIdx(e.castPose, e.castMax); rot = 0; ox += fi < 2 ? rand(-1.2, 1.2) : 0; }
+  if (e.charge) { fi = 2; rot = 0; }
   c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.ellipse(e.x, feet, e.r * 1.15, e.r * 0.4, 0, 0, TAU); c.fill();
   if (e.kind !== 'mob') { c.save(); c.translate(e.x, feet); c.scale(1, 0.42); c.rotate(t * 0.6); c.strokeStyle = e.kind === 'boss' ? (B.raid ? 'rgba(170,90,255,.7)' : 'rgba(225,40,30,.75)') : 'rgba(240,190,80,.7)'; c.lineWidth = 3; c.setLineDash([14, 10]); c.beginPath(); c.arc(0, 0, e.r * 1.5, 0, TAU); c.stroke(); c.setLineDash([]); c.restore(); }
   const glow = e.kind === 'boss' ? (B.raid ? 'rgba(160,80,255,.85)' : 'rgba(255,40,30,.8)') : e.kind === 'elite' ? 'rgba(255,190,70,.85)' : null;
-  const ok = drawSprite(c, enemyKey(e), e.x + ox, feet + oy, h, flip, { rot, sx, sy, alpha, glow, blur: 22, flash: e.flash > 0 ? 0.7 : 0 });
+  const ok = drawFrame(c, enemyKey(e), fi, e.x + ox, feet + oy, h, flip, { rot, sx, sy, alpha, glow, blur: 22, flash: e.flash > 0 ? 0.7 : 0 });
   if (!ok) { c.fillStyle = e.flash > 0 ? '#fff' : th.mob[e.type]; c.beginPath(); c.arc(e.x, e.y, e.r, 0, TAU); c.fill(); }
   const top = feet - h;
   if (e.burn > 0 && Math.random() < 0.35) addPart(e.x + rand(-e.r, e.r), feet - rand(0, h * 0.7), 0, -50, 0.4, 3, pick(['#ff7a3d', '#ffb347']));
@@ -1156,9 +1181,9 @@ function drawEnemy(c, e, th, t) {
   if (e.kind === 'mob' && e.hp < e.maxHp) { const bw = 30; c.fillStyle = 'rgba(0,0,0,.75)'; c.fillRect(e.x - bw / 2 - 1, top - 8, bw + 2, 5); c.fillStyle = '#b3141c'; c.fillRect(e.x - bw / 2, top - 7, bw * Math.max(0, e.hp / e.maxHp), 3); }
 }
 function drawCorpse(c, k) {
-  const a = Math.min(1, (k.life - k.t) / 1.2), im = IMG[k.key]; if (!im || !im.naturalWidth) return;
+  const a = Math.min(1, (k.life - k.t) / 1.2);
   c.fillStyle = `rgba(0,0,0,${0.45 * a})`; c.beginPath(); c.ellipse(k.x, k.y, k.h * 0.3, k.h * 0.1, 0, 0, TAU); c.fill();
-  drawSprite(c, k.key, k.x, k.y - k.z, k.h, k.flip, { rot: k.rot, sy: k.land ? 0.8 : 1, alpha: a, dark: `brightness(${Math.max(0.35, 1 - k.t * 0.4)}) saturate(.7)` });
+  drawFrame(c, k.key, 3, k.x, k.y - k.z, k.h, k.flip, { rot: k.rot, sy: k.land ? 0.8 : 1, alpha: a, dark: `brightness(${Math.max(0.35, 1 - k.t * 0.4)}) saturate(.7)` });
 }
 function drawDecals(c) {
   for (const d of B.decals) {
@@ -1229,7 +1254,7 @@ function render(now) {
   drawDebris(c, 'solid');
   // 잔상
   c.globalCompositeOperation = 'lighter';
-  for (const f of B.fx) if (f.type === 'ghost') { const a = f.life / f.max; drawSprite(c, f.key, f.x, f.y + (f.h ? 0 : 17), f.h || 92, f.flip, { alpha: a * 0.45 }); }
+  for (const f of B.fx) if (f.type === 'ghost') { const a = f.life / f.max; drawFrame(c, f.key, f.fi == null ? 2 : f.fi, f.x, f.y + (f.h ? 0 : 17), f.h || 92, f.flip, { alpha: a * 0.45 }); }
   c.globalCompositeOperation = 'source-over';
   const ents = B.enemies.slice(); const showP = !(B.ended && !B.win);
   if (showP) ents.push(null);

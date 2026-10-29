@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a120e">
+<title>드루이드 헌터즈 · 플레이어블 프로토타입</title>
+<style>
+:root{--tc:#e8a25c;--panel:rgba(255,255,255,.045);--panel2:rgba(255,255,255,.08);--line:rgba(255,255,255,.09);--txt:#e8efe9;--sub:#8fa197;--gold:#ffd166;--stone:#b3bec7;--sp:#7ee08a;--dia:#6fe3ff;--red:#ff6b6b}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#050807;color:var(--txt);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;font-size:14px}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit}
+.hidden{display:none!important}
+#cv{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block;background:#000}
+#lobby{position:fixed;inset:0;display:flex;justify-content:center;background:radial-gradient(ellipse at 50% -10%,#1b3a26 0%,#0b150f 50%,#050807 100%)}
+.shell{width:100%;max-width:520px;height:100%;display:flex;flex-direction:column;position:relative}
+/* top */
+.top{padding:10px 12px 8px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line);background:rgba(5,10,8,.6);backdrop-filter:blur(6px)}
+.prof{display:flex;align-items:center;gap:10px}
+.lvb{font-weight:800;font-size:15px;white-space:nowrap}
+.expbar{flex:1;height:7px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden}
+.expbar i{display:block;height:100%;background:linear-gradient(90deg,#7ee08a,#c8f58a);width:0}
+.pw{font-size:12px;color:var(--sub);white-space:nowrap}.pw b{color:#fff;font-size:14px}
+.cur{display:flex;gap:6px}
+.cur span{flex:1;display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 7px;font-weight:700;font-size:12.5px;min-width:0}
+.cur b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ic{width:13px;height:13px;flex:none;display:inline-block}
+.ic.gold{border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3b0,#ffc23d 60%,#b37a10)}
+.ic.stone{background:linear-gradient(135deg,#dfe7ee,#7f8b96);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.ic.sp{border-radius:50%;background:radial-gradient(circle,#c8ffcf,#3fbf5a);box-shadow:0 0 6px #3fbf5a}
+.ic.dia{background:linear-gradient(135deg,#d8fbff,#2bb8e0);transform:rotate(45deg) scale(.8);border-radius:2px}
+/* content */
+.content{flex:1;overflow-y:auto;padding:12px 12px 90px;-webkit-overflow-scrolling:touch}
+.content::-webkit-scrollbar{width:6px}.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:6px}
+.nav{position:absolute;left:0;right:0;bottom:0;display:flex;background:rgba(6,11,9,.92);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));backdrop-filter:blur(8px)}
+.nav button{flex:1;padding:8px 0;border-radius:10px;font-size:12.5px;font-weight:700;color:var(--sub);position:relative}
+.nav button.on{color:#fff;background:var(--panel2)}
+.nav button.on::after{content:"";position:absolute;left:30%;right:30%;top:2px;height:2px;border-radius:2px;background:var(--tc)}
+.nav button.dis{opacity:.25;pointer-events:none}
+.nav .dot{position:absolute;top:5px;right:18%;width:7px;height:7px;border-radius:50%;background:var(--red)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:12px}
+.card h3{font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.card h3 small{color:var(--sub);font-weight:500;font-size:11.5px;margin-left:auto}
+.muted{color:var(--sub);font-size:12px;line-height:1.5}
+.row{display:flex;gap:8px;align-items:center}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-weight:700;font-size:13px;transition:transform .08s}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:linear-gradient(180deg,var(--tc),color-mix(in srgb,var(--tc) 60%,#000));border-color:transparent;color:#120c06}
+.btn.big{width:100%;padding:14px;font-size:16px;border-radius:12px}
+.btn.dia{background:linear-gradient(180deg,#58d6f5,#1b86a8);color:#04202a;border-color:transparent}
+.btn.sm{padding:6px 9px;font-size:12px;border-radius:8px}
+.btn[disabled],.btn.off{opacity:.38;pointer-events:none}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.chip{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-weight:800;font-size:13px}
+.chip i{width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c)}
+.chip.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.chip.lock{opacity:.45}.chip.lock i{background:#555;box-shadow:none}
+.chip small{font-size:10px;color:var(--sub);font-weight:500}
+.hero{display:flex;gap:12px;align-items:center}
+.hero canvas{width:110px;height:110px;flex:none;border-radius:14px;background:radial-gradient(circle,#18261e,#0a110d)}
+.hero h2{font-size:18px}
+.sk{font-size:12px;margin-top:3px;color:#cfd8d2}.sk.lock{color:#5e6a63}
+.idle{display:flex;align-items:center;gap:10px}
+.idle .chest{width:46px;height:46px;flex:none;border-radius:12px;background:linear-gradient(160deg,#6b4a22,#2e1f0e);border:2px solid #c99a4a;position:relative;box-shadow:0 0 18px rgba(255,190,90,.25)}
+.idle .chest::after{content:"";position:absolute;left:4px;right:4px;top:15px;height:3px;background:#c99a4a}
+.idle .info{flex:1;font-size:12.5px;line-height:1.55}
+.idlebar{height:5px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;margin-top:4px}.idlebar i{display:block;height:100%;background:linear-gradient(90deg,#ffb84d,#ffe08a)}
+.chnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.chnav b{font-size:15px}.chnav small{color:var(--sub);font-size:11.5px;margin-left:6px}
+.chnav button{width:34px;height:34px;border-radius:10px;background:var(--panel2);font-size:18px}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.stg{aspect-ratio:1.25;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-weight:800;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative}
+.stg small{font-size:9.5px;color:var(--sub);font-weight:600}
+.stg.clear{background:color-mix(in srgb,var(--tc) 12%,transparent)}
+.stg.clear::after{content:"";position:absolute;top:4px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--sp)}
+.stg.cur{border-color:#fff3;box-shadow:inset 0 0 0 1px #fff3}
+.stg.lock{opacity:.3}
+.stg.sel{border-color:var(--tc);box-shadow:0 0 0 2px var(--tc)}
+.stg.boss{color:#ff8a8a}.stg.mid{color:#ffcf7a}
+.toggles{display:flex;gap:6px;margin-top:8px}
+.tg{flex:1;padding:8px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--sub)}
+.tg.on{color:#fff;border-color:var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent)}
+.coach{background:linear-gradient(90deg,color-mix(in srgb,var(--tc) 30%,transparent),transparent);border:1px solid var(--tc);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:700;line-height:1.5}
+/* tree */
+.ttabs{display:flex;gap:6px;margin-bottom:10px}
+.ttabs button{flex:1;padding:8px 0;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-weight:800;font-size:12.5px}
+.ttabs button.on{border-color:var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.treewrap{position:relative;background:radial-gradient(circle at 50% 60%,color-mix(in srgb,var(--c) 10%,transparent),transparent 70%);border-radius:14px}
+svg.tree{width:100%;display:block}
+svg.tree .nd{cursor:pointer}
+svg.tree .pulse{animation:pulse 1.1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.ndinfo h4{font-size:15px;display:flex;align-items:center;gap:6px}
+.typ{font-size:10.5px;padding:2px 7px;border-radius:20px;background:var(--panel2);font-weight:700}
+.cost{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0;font-size:12.5px;font-weight:700}
+.cost span{display:flex;align-items:center;gap:4px}.cost .no{color:var(--red)}
+/* equip */
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.it{border-radius:11px;background:var(--panel);border:1.5px solid var(--gc,#444);padding:7px 5px;text-align:center;position:relative;min-height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px}
+.it .sl{font-size:10px;color:var(--sub)}
+.it .nm{font-weight:800;font-size:11.5px;color:var(--gc);line-height:1.25}
+.it .en{position:absolute;top:3px;right:5px;font-size:10.5px;font-weight:800;color:#fff}
+.it .eq{position:absolute;bottom:4px;left:5px;font-size:9.5px;font-weight:800;background:var(--tc);color:#000;border-radius:4px;padding:0 3px}
+.it.empty{border-style:dashed;border-color:#333;color:#555}
+.it .od{display:flex;gap:2px;justify-content:center}.it .od i{width:6px;height:6px;border-radius:50%}
+.inv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.setb{font-size:12px;margin-top:8px;line-height:1.6}
+.setb .on{color:var(--sp);font-weight:700}
+table.pt{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+table.pt th,table.pt td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
+table.pt th{color:var(--sub);font-weight:600}
+.opt{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;background:var(--panel);margin-bottom:5px;font-size:13px}
+.opt .g{font-size:11px;font-weight:800;padding:1px 6px;border-radius:5px;background:rgba(255,255,255,.07)}
+.opt .lk{margin-left:auto;font-size:11.5px;padding:4px 8px;border-radius:7px;background:var(--panel2);font-weight:700}
+.opt .lk.on{background:#ffd166;color:#201600}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:12.5px}
+.statgrid div{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)}
+.statgrid span{color:var(--sub)}
+.upg{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.upg:last-child{border:0}
+.upg .ui{flex:1}.upg .ui b{font-size:14px}.upg .ui div{font-size:12px;color:var(--sub);margin-top:2px}
+.q{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.q:last-child{border:0}
+.q .qi{flex:1;font-size:13px}.q .qi small{display:block;color:var(--sub);font-size:11.5px;margin-top:2px}
+.qbar{height:5px;background:rgba(255,255,255,.08);border-radius:5px;overflow:hidden;margin-top:5px}.qbar i{display:block;height:100%;background:var(--sp)}
+.att{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.att div{border-radius:10px;background:var(--panel);border:1px solid var(--line);padding:7px 2px;text-align:center;font-size:10.5px;line-height:1.35}
+.att div b{display:block;font-size:11px}
+.att .done{opacity:.4}.att .now{border-color:var(--tc);box-shadow:0 0 0 1px var(--tc)}
+.pack{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);margin-bottom:7px;position:relative}
+.pack .pi{flex:1}.pack .pi b{font-size:15px;color:var(--dia)}.pack .pi div{font-size:11.5px;color:var(--sub)}
+.badge{position:absolute;top:-7px;left:10px;background:#ff5f7e;color:#fff;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:6px}
+.ph{opacity:.55}
+input.coupon{flex:1;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:10px;padding:9px 10px;color:#fff;text-transform:uppercase}
+/* modal */
+#mwrap{position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:50;padding:14px;backdrop-filter:blur(3px)}
+.modal{width:100%;max-width:440px;max-height:90vh;overflow-y:auto;background:linear-gradient(180deg,#152019,#0c130f);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:pop .18s ease-out}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+.modal h2{font-size:20px;text-align:center;margin-bottom:4px}
+.modal h2.win{color:#9ef0a8}.modal h2.lose{color:#ff8a8a}
+.modal .sub{text-align:center;color:var(--sub);font-size:12.5px;margin-bottom:12px}
+.rw{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}
+.rw div{display:flex;align-items:center;gap:6px;background:var(--panel);border-radius:10px;padding:8px 10px;font-weight:700;font-size:13px}
+.rw div span{color:var(--sub);font-weight:500;font-size:12px;margin-right:auto}
+.msgs div{font-size:13px;padding:7px 10px;border-radius:9px;background:color-mix(in srgb,var(--tc) 14%,transparent);margin-bottom:5px;font-weight:700}
+.mbtns{display:flex;gap:8px;margin-top:14px}.mbtns .btn{flex:1;padding:12px}
+.lore{font-size:14px;line-height:1.8;color:#cfe0d4;text-align:center;margin:10px 0 16px}
+/* toast */
+#toast{position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:rgba(10,16,12,.94);border:1px solid rgba(255,255,255,.15);padding:9px 14px;border-radius:12px;font-size:13px;font-weight:700;animation:tin .2s ease-out;max-width:86vw;text-align:center}
+@keyframes tin{from{transform:translateY(-6px);opacity:0}}
+/* hud */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+#hud .tp{position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;display:flex;gap:8px;align-items:flex-start}
+.hbtn{pointer-events:auto;width:40px;height:40px;border-radius:12px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.15);font-weight:800;font-size:13px;flex:none}
+.hbtn.on{border-color:var(--tc);color:var(--tc);background:rgba(0,0,0,.6)}
+.hst{flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:6px 10px}
+.hst .t{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800}
+.hst .t span{color:var(--sub);font-weight:600}
+.bar{height:7px;border-radius:7px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;background:var(--tc);width:0;transition:width .1s}
+#bossBar{position:absolute;top:calc(60px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(440px,84vw);text-align:center}
+#bossBar .bn{font-size:13px;font-weight:800;color:#ffb3b3;text-shadow:0 1px 4px #000}
+#bossBar .bar{height:11px;background:rgba(80,0,0,.55);border:1px solid rgba(255,120,120,.35)}
+#bossBar .bar i{background:linear-gradient(90deg,#ff4d4d,#ff9a5c)}
+.hhp{position:absolute;left:10px;bottom:calc(16px + env(safe-area-inset-bottom));width:min(280px,52vw)}
+.hhp .lbl span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hhp .lbl{font-size:12px;font-weight:800;text-shadow:0 1px 3px #000;display:flex;justify-content:space-between}
+.hhp .bar{height:11px}.hhp .bar i{background:linear-gradient(90deg,#3fd66b,#a6f07c)}
+.skills{position:absolute;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:flex-end}
+.skb{pointer-events:auto;width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 40% 35%,color-mix(in srgb,var(--tc) 55%,#000),#0b0f0c);border:2px solid var(--tc);position:relative;overflow:hidden;font-size:11px;font-weight:800;line-height:1.15;padding:4px;text-shadow:0 1px 2px #000;box-shadow:0 0 14px color-mix(in srgb,var(--tc) 50%,transparent)}
+.skb.ult{width:74px;height:74px;border-width:3px}
+.skb .cd{position:absolute;inset:0;border-radius:50%}
+.skb .ct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff}
+.skb .ky{position:absolute;bottom:5px;left:0;right:0;font-size:9.5px;opacity:.7}
+.skb .nm{position:relative}
+#hint{position:absolute;left:50%;top:30%;transform:translateX(-50%);background:rgba(0,0,0,.6);border:1px solid var(--tc);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:800;text-align:center;max-width:86vw;line-height:1.5}
+@media (min-width:900px){.skb{width:72px;height:72px}.skb.ult{width:84px;height:84px}}
+</style>
+</head>
+<body>
+<canvas id="cv" class="hidden"></canvas>
+<div id="lobby"><div class="shell">
+  <div class="top" id="top"></div>
+  <div class="content" id="content"></div>
+  <div class="nav" id="nav"></div>
+</div></div>
+<div id="hud" class="hidden">
+  <div class="tp">
+    <button class="hbtn" data-act="pause">II</button>
+    <div class="hst"><div class="t"><b id="hStage"></b><span id="hProgTxt"></span></div><div class="bar"><i id="hProg"></i></div></div>
+    <button class="hbtn" id="hAuto" data-act="hauto">자동</button>
+    <button class="hbtn" id="hSpd" data-act="hspeed">x1</button>
+  </div>
+  <div id="bossBar" class="hidden"><div class="bn" id="bossName"></div><div class="bar"><i id="bossHp"></i></div></div>
+  <div id="hint" class="hidden"></div>
+  <div class="hhp"><div class="lbl"><span id="hLv"></span><span id="hHpTxt"></span></div><div class="bar"><i id="hHp"></i></div></div>
+  <div class="skills" id="skills"></div>
+</div>
+<div id="mwrap" class="hidden"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   드루이드 헌터즈 - 플레이어블 프로토타입
+   기획서(druid_deck_hunter_.pptx) 기반. 밸런스 수치는 CONFIG에서 조절.
+   ========================================================= */
+const CONFIG = {
+  maxChapter: 10,               // 정식 출시 목표 10챕터 (MVP 5챕터)
+  spPerLevel: 1,
+  spPerChapterClear: 3,
+  startGold: 100,
+  idle: { capHours: 8, killsPerHour: 360, goldRate: 0.6, expRate: 0.5, overflowDia: 20, adMult: 2, comebackHours: 24 },
+  // 장비 드랍 확률(%) - 기획서 9p
+  drop: { normal: { hero: 0.1, rare: 12, common: 50 }, raidLegend: 0.002 },
+  // 옵션 등급 확률(%) / 배율 - 기획서 9p
+  optTiers: [
+    { name: '하급', p: 97.8, mul: 1.0, color: '#9aa4b1' },
+    { name: '중급', p: 1.8, mul: 1.5, color: '#5fd18b' },
+    { name: '상급', p: 0.30, mul: 2.0, color: '#4fa3ff' },
+    { name: '최상급', p: 0.002, mul: 3.0, color: '#ff5fa2' },
+  ],
+  pity: 100,                    // 재설정 100회 누적 시 최상급 1개 확정
+  reroll: { stone: 10, dia: 5, lockStone: 10, lockDia: 5 },
+  respecDia: 50,
+  sweepDia: 5,
+  invCap: 80,
+  monster: { hpBase: 30, atkBase: 10, hpGrowth: 1.12, atkGrowth: 1.09, eliteHp: 10, bossHp: 40 },
+  reward: { goldBase: 1.5, goldGrowth: 1.1, expBase: 2, expGrowth: 1.08 },
+  raidTickets: 3, raidTime: 60,
+};
+
+/* ---------- util ---------- */
+const $ = s => document.querySelector(s);
+const TAU = Math.PI * 2;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
+const fmt = n => { n = Math.floor(n || 0); if (n >= 1e12) return (n / 1e12).toFixed(2) + '조'; if (n >= 1e8) return (n / 1e8).toFixed(2) + '억'; if (n >= 1e5) return (n / 1e4).toFixed(1) + '만'; return n.toLocaleString('ko-KR'); };
+const ymd = d => { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return ymd(d); };
+const weekKey = () => { const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d); };
+function hash(i, j) { let h = Math.imul(i, 374761393) + Math.imul(j, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
+
+/* ---------- data ---------- */
+const TECH = {
+  beast: { id: 'beast', name: '짐승 드루이드', short: '짐승', color: '#e8a25c', glow: '232,162,92', palette: '어스톤', role: '동물 변신 근접 딜러', desc: '형태 변신으로 돌진·러쉬, 높은 이동속도', unlockCh: 0,
+    base: { atk: 1.0, hp: 1.1, def: 3, spd: 1.15 },
+    attack: { name: '할퀴기', range: 82, cd: 0.5, desc: '가까운 적을 부채꼴로 할퀸다' },
+    skills: [
+      { id: 'dash', name: '야수 돌진', cd: 6, desc: '이동 방향으로 돌진, 경로의 적에게 250% 피해 (돌진 중 무적)' },
+      { id: 'roar', name: '원시의 포효', cd: 12, desc: '주변 적에게 150% 피해 + 1.5초 기절' },
+      { id: 'avatar', name: '대자연의 화신', cd: 40, desc: '8초간 거대 야수로 변신: 피해 +50%, 공격 속도 2배, 사거리 증가' }],
+    tree: { d1: { name: '야성의 질주', max: 5, stat: 'spdP', per: 5, desc: '이동 속도 +{v}%' }, d2: { name: '찢는 발톱', max: 5, stat: 'critC', per: 4, desc: '치명타 확률 +{v}%' } } },
+  earth: { id: 'earth', name: '대지 드루이드', short: '대지', color: '#8cc65a', glow: '140,198,90', palette: '모스', role: '돌·가시 탱커형', desc: '높은 생존력, 도발·반사 데미지 중심', unlockCh: 1,
+    base: { atk: 0.85, hp: 1.6, def: 8, spd: 0.95 },
+    attack: { name: '돌가시', range: 230, cd: 0.9, desc: '가까운 적 발밑에 돌가시를 솟게 해 범위 피해' },
+    skills: [
+      { id: 'quake', name: '지진', cd: 7, desc: '주변 넓은 범위에 200% 피해 + 넉백' },
+      { id: 'thorn', name: '가시 방벽', cd: 15, desc: '5초간 받는 피해 -60%, 받은 피해 100% 반사, 주변 적을 끌어당김(도발)' },
+      { id: 'mountain', name: '산맥 소환', cd: 45, desc: '세 겹의 바위 파동이 퍼지며 각 400% 피해' }],
+    tree: { d1: { name: '가시 피부', max: 5, stat: 'reflect', per: 12, desc: '받은 피해의 {v}% 반사' }, d2: { name: '대지의 분노', max: 5, stat: 'cdr', per: 5, desc: '스킬 쿨타임 -{v}%' } } },
+  spirit: { id: 'spirit', name: '정령 드루이드', short: '정령', color: '#6cb8ff', glow: '108,184,255', palette: '스톰', role: '번개·폭풍 원거리 딜러', desc: '광역 번개 체인, 이동기 위주 카이팅 플레이', unlockCh: 2,
+    base: { atk: 1.05, hp: 0.85, def: 0, spd: 1.0 },
+    attack: { name: '연쇄 번개', range: 380, cd: 0.75, desc: '원거리 적에게 번개를 날려 주변 적에게 연쇄' },
+    skills: [
+      { id: 'blink', name: '번개 도약', cd: 5, desc: '이동 방향으로 순간이동 후 착지 지점에 220% 범위 피해' },
+      { id: 'storm', name: '폭풍 구름', cd: 14, desc: '6초간 머리 위 폭풍이 주변 적에게 번개를 떨어뜨림 (타격당 100%)' },
+      { id: 'judge', name: '천벌', cd: 45, desc: '화면 안 모든 적에게 300% 번개 3연타' }],
+    tree: { d1: { name: '전도체', max: 3, stat: 'chain', per: 1, desc: '연쇄 대상 +{v}' }, d2: { name: '폭풍의 눈', max: 5, stat: 'critD', per: 15, desc: '치명타 피해 +{v}%' } } },
+  fire: { id: 'fire', name: '화염 드루이드', short: '화염', color: '#ff7a3d', glow: '255,122,61', palette: '엠버', role: '화염방사 광역 딜러', desc: '장판·화상 도트로 물량 몬스터 정리', unlockCh: 3,
+    base: { atk: 1.0, hp: 0.95, def: 1, spd: 1.0 },
+    attack: { name: '화염 방사', range: 165, cd: 0.12, desc: '전방 부채꼴로 화염을 뿜어 지속 피해 + 화상' },
+    skills: [
+      { id: 'field', name: '화염 장판', cd: 8, desc: '5초간 타오르는 장판 (0.5초마다 80% + 화상)' },
+      { id: 'fireball', name: '화염구', cd: 6, desc: '가까운 적에게 폭발하는 화염구 (범위 300%)' },
+      { id: 'meteor', name: '메테오', cd: 45, desc: '주변에 운석 6개를 떨어뜨림 (각 400% 범위 피해)' }],
+    tree: { d1: { name: '불꽃 심화', max: 5, stat: 'burnP', per: 20, desc: '화상 피해 +{v}%' }, d2: { name: '불씨 확산', max: 5, stat: 'rangeP', per: 8, desc: '화염 방사 사거리 +{v}%' } } },
+};
+const TECH_ORDER = ['beast', 'earth', 'spirit', 'fire'];
+const THEMES = {
+  forest: { name: '숲', bg: '#0d1811', blot: 'rgba(40,80,45,.07)', decor: ['#183424', '#24452c', '#08100b'], mob: { grunt: '#78a33f', runner: '#a07a52', tank: '#7a806a', shooter: '#c8649a' }, eye: '#ffe9a0', proj: '#c6ff7a' },
+  ruins: { name: '폐허', bg: '#131318', blot: 'rgba(70,70,90,.07)', decor: ['#272733', '#34323f', '#0a0a0e'], mob: { grunt: '#b0ad9e', runner: '#8a9bcc', tank: '#8c8373', shooter: '#d6b062' }, eye: '#9fe7ff', proj: '#ffd27a' },
+  abyss: { name: '심연', bg: '#0b0916', blot: 'rgba(80,40,140,.07)', decor: ['#1f1739', '#2c1c4d', '#05030b'], mob: { grunt: '#8352c4', runner: '#5282c8', tank: '#58457f', shooter: '#cc5299' }, eye: '#ff7ce0', proj: '#ff7ce0' },
+};
+const themeOf = ch => ch <= 3 ? 'forest' : ch <= 6 ? 'ruins' : 'abyss';
+const CH_NAMES = ['이끼 숲', '속삭이는 늪', '고목의 심장', '무너진 성벽', '잊힌 신전', '망령의 회랑', '심연의 입구', '공허의 둥지', '잿불 균열', '타락한 성역'];
+const BOSS_NAMES = ['고목의 수호자', '썩은 뿌리 여왕', '이끼 거인', '폐허의 기사', '무너진 석상왕', '망령 사제', '심연의 눈', '공허 포식자', '잿불 와이번', '타락한 대드루이드'];
+const BOSS_PATS = { forest: ['slam', 'summon', 'ring'], ruins: ['charge', 'slam', 'ring', 'summon'], abyss: ['multi', 'spiral', 'charge', 'summon'], raid: ['slam', 'multi', 'spiral', 'charge', 'ring', 'summon'] };
+const SETS = ['이끼 수호자', '늪지 은둔자', '고목 파수꾼', '성벽 순례자', '신전 사제', '망령 추적자', '심연 탐험가', '공허 사냥꾼', '잿불 군주', '세계수'];
+const SLOTS = ['weapon', 'helm', 'armor', 'acc'];
+const SLOT_NAMES = { weapon: '지팡이', helm: '두건', armor: '로브', acc: '부적' };
+const SLOT_LABEL = { weapon: '무기', helm: '투구', armor: '갑옷', acc: '장신구' };
+const GRADES = [
+  { name: '일반', color: '#b8c0cc', slots: 0, mul: 1, maxEnh: 5, dis: 1 },
+  { name: '희귀', color: '#4fa3ff', slots: 1, mul: 1.35, maxEnh: 10, dis: 3 },
+  { name: '영웅', color: '#b36bff', slots: 2, mul: 1.8, maxEnh: 15, dis: 10 },
+  { name: '전설', color: '#ffb340', slots: 3, mul: 2.5, maxEnh: 20, dis: 30 }];
+const OPTS = { atkP: { name: '공격력', base: 4 }, hpP: { name: '최대 체력', base: 5 }, critC: { name: '치명타 확률', base: 2 }, critD: { name: '치명타 피해', base: 8 }, aspd: { name: '공격 속도', base: 3 }, spdP: { name: '이동 속도', base: 3 }, cdr: { name: '스킬 쿨감', base: 3 }, goldP: { name: '골드 획득', base: 6 } };
+const OPT_KEYS = Object.keys(OPTS);
+const UPG = {
+  atk: { name: '공격력 강화', val: l => 3 * l * (1 + l / 20), cost: l => Math.floor(20 * Math.pow(1.11, l)) },
+  hp: { name: '체력 강화', val: l => 25 * l * (1 + l / 20), cost: l => Math.floor(18 * Math.pow(1.1, l)) },
+  def: { name: '방어력 강화', val: l => 1.5 * l * (1 + l / 25), cost: l => Math.floor(25 * Math.pow(1.12, l)) } };
+const COUPONS = { DRUID2026: { dia: 300, label: '다이아 300' }, HUNTERS: { gold: 5000, stone: 50, label: '골드 5,000 + 스톤 50' }, WELCOME: { item: 2, label: '영웅 장비 1개' } };
+const PACKS = [{ id: 'p1', dia: 100, price: 1200 }, { id: 'p2', dia: 550, price: 5500 }, { id: 'p3', dia: 1200, price: 11000 }, { id: 'p4', dia: 2600, price: 22000 }];
+const VIP_STEPS = [0, 5000, 20000, 50000, 100000];
+const ATTEND = [{ gold: 500, t: '골드 500' }, { dia: 30, t: '다이아 30' }, { stone: 20, t: '스톤 20' }, { gold: 2000, t: '골드 2천' }, { dia: 50, t: '다이아 50' }, { stone: 40, t: '스톤 40' }, { item: 2, t: '영웅 상자' }];
+const DAILY = [
+  { id: 'kills', name: '몬스터 200마리 처치', goal: 200, r: { dia: 30 } },
+  { id: 'clears', name: '스테이지 5회 클리어', goal: 5, r: { dia: 20, gold: 1000 } },
+  { id: 'idle', name: '방치 보상 1회 수령', goal: 1, r: { dia: 10 } },
+  { id: 'growth', name: '장비 강화 또는 옵션 재설정 1회', goal: 1, r: { dia: 10, stone: 10 } }];
+
+function buildTree(tech) {
+  const T = TECH[tech];
+  return [
+    { id: 'core', name: T.short + '의 각성', type: 'P', max: 5, stat: 'atkP', per: 6, tier: 1, x: 200, y: 392, req: [], desc: '공격력 +{v}%' },
+    { id: 'a1', name: '날카로운 본능', type: 'P', max: 5, stat: 'aspd', per: 6, tier: 1, x: 82, y: 300, req: ['core'], desc: '공격 속도 +{v}%' },
+    Object.assign({ id: 'd1', type: 'P', tier: 1, x: 200, y: 300, req: ['core'] }, T.tree.d1),
+    { id: 'b1', name: '자연의 생명력', type: 'P', max: 5, stat: 'hpP', per: 10, tier: 1, x: 318, y: 300, req: ['core'], desc: '최대 체력 +{v}%' },
+    { id: 'a2', name: '기술 숙련', type: 'P', max: 5, stat: 'skillDmg', per: 15, tier: 2, x: 82, y: 205, req: ['a1'], desc: '액티브 스킬 피해 +{v}%' },
+    Object.assign({ id: 'd2', type: 'P', tier: 2, x: 200, y: 205, req: ['d1'] }, T.tree.d2),
+    { id: 'b2', name: '나무껍질 피부', type: 'P', max: 5, stat: 'dr', per: 3, tier: 2, x: 318, y: 205, req: ['b1'], desc: '받는 피해 -{v}%' },
+    { id: 's2', name: T.skills[1].name, type: 'A', max: 1, tier: 3, x: 130, y: 112, req: ['a2', 'd2'], desc: T.skills[1].desc, stone: 10, skill: 1 },
+    { id: 'ult', name: T.skills[2].name, type: 'U', max: 1, tier: 4, x: 262, y: 44, req: ['s2', 'b2'], desc: T.skills[2].desc, stone: 30, skill: 2 }];
+}
+const TREES = {}; TECH_ORDER.forEach(t => TREES[t] = buildTree(t));
+
+/* ---------- save ---------- */
+const SAVE_KEY = 'druidHunters.save.v1';
+function newSave() {
+  const trees = {}; TECH_ORDER.forEach(t => trees[t] = {});
+  return { v: 1, gold: CONFIG.startGold, stone: 0, sp: 0, dia: 0, lvl: 1, exp: 0, tech: 'beast', cleared: -1, trees, freeRespec: true,
+    upg: { atk: 0, hp: 0, def: 0 }, inv: [], equip: { weapon: null, helm: null, armor: null, acc: null }, uidSeq: 0, pity: 0,
+    idleAt: Date.now(), lastSeen: Date.now(), daily: {}, attend: { last: '', streak: 0 }, raid: { week: '', tickets: CONFIG.raidTickets, best: 0 },
+    shop: { firstBuy: false, spent: 0 }, coupons: {}, settings: { auto: false, autoNext: false, repeat: false, speed: 1 }, tut: 0, sel: { ch: 1, st: 1 }, stats: { kills: 0, plays: 0 } };
+}
+let S;
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) { const d = JSON.parse(raw); const n = newSave(); S = Object.assign(n, d); S.settings = Object.assign(n.settings, d.settings || {}); TECH_ORDER.forEach(t => { if (!S.trees[t]) S.trees[t] = {}; }); return; }
+  } catch (e) { }
+  S = newSave();
+}
+function save() { S.lastSeen = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
+function refreshPeriodic() {
+  const d = ymd();
+  if (S.daily.date !== d) S.daily = { date: d, kills: 0, clears: 0, idle: 0, growth: 0, claimed: {}, ads: 0 };
+  const w = weekKey();
+  if (S.raid.week !== w) { S.raid.week = w; S.raid.tickets = CONFIG.raidTickets; }
+}
+
+/* ---------- formulas ---------- */
+const goldPerKill = g => CONFIG.reward.goldBase * Math.pow(CONFIG.reward.goldGrowth, g);
+const expPerKill = g => CONFIG.reward.expBase * Math.pow(CONFIG.reward.expGrowth, g);
+const expReq = l => Math.floor(30 * Math.pow(1.18, l - 1));
+const recPower = g => Math.round(80 * Math.pow(1.13, g));
+const stageG = (ch, st) => (ch - 1) * 10 + (st - 1);
+const gToCS = g => ({ ch: Math.floor(g / 10) + 1, st: g % 10 + 1 });
+const stageType = st => st === 10 ? 'boss' : st === 5 ? 'mid' : 'normal';
+const techUnlocked = id => S.cleared >= TECH[id].unlockCh * 10 - 1;
+const vipLevel = () => { let v = 0; VIP_STEPS.forEach((s, i) => { if (S.shop.spent >= s) v = i; }); return v; };
+const itemById = uid => uid == null ? null : S.inv.find(i => i.uid === uid) || null;
+const optVal = o => OPTS[o.key].base * CONFIG.optTiers[o.tier].mul;
+function itemBase(it) {
+  const gm = GRADES[it.grade].mul, f = Math.pow(1.1, it.ilvl) * gm * (1 + 0.08 * it.enh);
+  switch (it.slot) {
+    case 'weapon': return { atkFlat: 6 * f };
+    case 'helm': return { hpFlat: 45 * f };
+    case 'armor': return { hpFlat: 25 * f, def: 2.5 * f };
+    default: return { atkFlat: 2.5 * f, critC: 1.5 * gm + 0.1 * it.enh };
+  }
+}
+function computeStats(tech, eqOv) {
+  tech = tech || S.tech; const T = TECH[tech]; const eq = eqOv || S.equip;
+  const s = { atkFlat: 10 + (S.lvl - 1) * 2, hpFlat: 100 + (S.lvl - 1) * 15, def: 0, atkP: 0, hpP: 0, spdP: 0, critC: 5, critD: 50, aspd: 0, cdr: 0, dr: 0, reflect: 0, goldP: 0, skillDmg: 0, ultCdr: 0, chain: 0, burnP: 0, rangeP: 0 };
+  s.atkFlat += UPG.atk.val(S.upg.atk); s.hpFlat += UPG.hp.val(S.upg.hp); s.def += UPG.def.val(S.upg.def);
+  const setCount = {};
+  for (const slot of SLOTS) {
+    const it = itemById(eq[slot]); if (!it) continue;
+    const b = itemBase(it); for (const k in b) s[k] += b[k];
+    for (const o of it.opts) s[o.key] += optVal(o);
+    setCount[it.set] = (setCount[it.set] || 0) + 1;
+  }
+  for (const k in setCount) { if (setCount[k] >= 2) s.atkP += 10; if (setCount[k] >= 4) s.ultCdr += 15; }
+  const lv = S.trees[tech];
+  for (const n of TREES[tech]) { const l = lv[n.id] || 0; if (l && n.stat) s[n.stat] += n.per * l; }
+  return { atk: s.atkFlat * T.base.atk * (1 + s.atkP / 100), maxHp: s.hpFlat * T.base.hp * (1 + s.hpP / 100), def: s.def + T.base.def * (1 + S.lvl * 0.2),
+    spd: 165 * T.base.spd * (1 + s.spdP / 100), critC: Math.min(100, s.critC) / 100, critD: 1 + s.critD / 100, aspd: 1 + s.aspd / 100,
+    cdr: Math.min(50, s.cdr) / 100, dr: Math.min(60, s.dr) / 100, reflect: s.reflect / 100, goldP: s.goldP / 100, skillDmg: 1 + s.skillDmg / 100,
+    ultCdr: Math.min(50, s.ultCdr) / 100, chain: s.chain, burnP: s.burnP / 100, rangeP: s.rangeP / 100, setCount };
+}
+const powerOf = st => Math.round(st.atk * (1 + st.critC * (st.critD - 1)) * st.aspd * (0.6 + 0.4 * st.skillDmg) * 3 + st.maxHp * 0.25 + st.def * 5);
+const curPower = () => powerOf(computeStats());
+function skillUnlocked(i, tech) { tech = tech || S.tech; if (i === 0) return true; const lv = S.trees[tech]; return i === 1 ? (lv.s2 || 0) > 0 : (lv.ult || 0) > 0; }
+
+/* ---------- items ---------- */
+function rollTier() {
+  const T = CONFIG.optTiers, r = Math.random() * 100;
+  if (r < T[3].p) return 3; if (r < T[3].p + T[2].p) return 2; if (r < T[3].p + T[2].p + T[1].p) return 1; return 0;
+}
+function makeItem(grade, ilvl, set) {
+  const it = { uid: ++S.uidSeq, slot: pick(SLOTS), grade, ilvl: Math.max(0, ilvl), set: set == null ? clamp(Math.floor(ilvl / 10), 0, 9) : set, enh: 0, opts: [] };
+  for (let i = 0; i < GRADES[grade].slots; i++) it.opts.push({ key: pick(OPT_KEYS), tier: rollTier(), lock: false });
+  return it;
+}
+const itemName = it => `${SETS[it.set]}의 ${SLOT_NAMES[it.slot]}`;
+function addItem(it, msgs) {
+  if (S.inv.length >= CONFIG.invCap) { const g = GRADES[it.grade].dis; S.stone += g; msgs && msgs.push(`가방이 가득 차 ${GRADES[it.grade].name} 장비를 자동 분해 (스톤 +${g})`); return false; }
+  S.inv.push(it); if (S.tut === 2) S.tut = 3; return true;
+}
+function rollNormalDrop() {
+  const d = CONFIG.drop.normal, r = Math.random() * 100;
+  if (r < d.hero) return 2; if (r < d.hero + d.rare) return 1; if (r < d.hero + d.rare + d.common) return 0; return -1;
+}
+
+/* ---------- grant ---------- */
+function grant(r, msgs) {
+  if (r.gold) S.gold += Math.floor(r.gold); if (r.stone) S.stone += Math.floor(r.stone); if (r.dia) S.dia += Math.floor(r.dia); if (r.sp) S.sp += r.sp;
+  if (r.exp) {
+    S.exp += Math.floor(r.exp); let ups = 0;
+    while (S.exp >= expReq(S.lvl)) { S.exp -= expReq(S.lvl); S.lvl++; S.sp += CONFIG.spPerLevel; ups++; }
+    if (ups && msgs) msgs.push(`레벨 업! Lv.${S.lvl} (스킬포인트 +${ups * CONFIG.spPerLevel})`);
+  }
+  if (r.item != null) { const it = makeItem(r.item, Math.max(0, S.cleared)); addItem(it, msgs); msgs && msgs.push(`[${GRADES[it.grade].name}] ${itemName(it)} 획득`); }
+}
+const rewardText = r => [r.gold ? `골드 ${fmt(r.gold)}` : '', r.stone ? `스톤 ${r.stone}` : '', r.dia ? `다이아 ${r.dia}` : '', r.item != null ? `${GRADES[r.item].name} 장비` : ''].filter(Boolean).join(' · ');
+
+/* ---------- idle ---------- */
+function idleRates() {
+  if (S.cleared < 0) return { kills: 0, gold: 0, exp: 0, stone: 0 };
+  const g = S.cleared, st = computeStats(), k = CONFIG.idle.killsPerHour;
+  return { kills: k, gold: goldPerKill(g) * k * CONFIG.idle.goldRate * (1 + st.goldP), exp: expPerKill(g) * k * CONFIG.idle.expRate, stone: 2 + Math.floor(g / 10) * 1.5 };
+}
+const idleCap = () => CONFIG.idle.capHours + vipLevel();
+function idlePending() {
+  const el = Math.max(0, (Date.now() - S.idleAt) / 3600000), cap = idleCap(), h = Math.min(el, cap), over = Math.min(Math.max(0, el - cap), cap), r = idleRates();
+  return { el, h, over, cap, kills: Math.floor(r.kills * h), gold: Math.floor(r.gold * h), exp: Math.floor(r.exp * h), stone: Math.floor(r.stone * h),
+    oGold: Math.floor(r.gold * over), oStone: Math.floor(r.stone * over), oExp: Math.floor(r.exp * over), rate: r };
+}
+function claimIdle(mult, withOver) {
+  const p = idlePending(); if (p.gold <= 0 && p.stone <= 0) { toast('아직 쌓인 보상이 없어요'); return; }
+  const msgs = [];
+  const r = { gold: (p.gold + (withOver ? p.oGold : 0)) * mult, stone: (p.stone + (withOver ? p.oStone : 0)) * mult, exp: (p.exp + (withOver ? p.oExp : 0)) * mult };
+  grant(r, msgs); S.idleAt = Date.now(); S.daily.idle = 1; save();
+  toast(`방치 보상 수령: 골드 ${fmt(r.gold)} · 스톤 ${fmt(r.stone)} · EXP ${fmt(r.exp)}`); msgs.forEach(m => toast(m));
+  closeModal(); renderLobby();
+}
+const hm = h => { const t = Math.floor(h * 60); return `${Math.floor(t / 60)}시간 ${t % 60}분`; };
+
+/* =========================================================
+   BATTLE
+   ========================================================= */
+const cv = $('#cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, B = null;
+function resize() { DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; if (B) B.scale = viewScale(); }
+const viewScale = () => clamp(Math.min(innerWidth, innerHeight) / 700, 0.55, 1.15);
+addEventListener('resize', resize);
+const keys = new Set();
+addEventListener('keydown', e => {
+  keys.add(e.code);
+  if (!B || B.ended) return;
+  if (e.code === 'Digit1' || e.code === 'KeyJ' || e.code === 'Space') { useSkill(0); e.preventDefault(); }
+  if (e.code === 'Digit2' || e.code === 'KeyK') useSkill(1);
+  if (e.code === 'Digit3' || e.code === 'KeyL') useSkill(2);
+  if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+const joy = { active: false, id: null, bx: 0, by: 0, x: 0, y: 0 };
+cv.addEventListener('pointerdown', e => { if (!B) return; joy.active = true; joy.id = e.pointerId; joy.bx = joy.x = e.clientX; joy.by = joy.y = e.clientY; try { cv.setPointerCapture(e.pointerId); } catch (_) { } });
+cv.addEventListener('pointermove', e => { if (joy.active && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
+const joyEnd = e => { if (e.pointerId === joy.id) joy.active = false; };
+cv.addEventListener('pointerup', joyEnd); cv.addEventListener('pointercancel', joyEnd);
+document.addEventListener('visibilitychange', () => { if (document.hidden) { if (B && !B.ended && !B.paused) togglePause(); save(); } });
+
+const ETYPES = { grunt: { r: 14, spd: 68, hp: 1, atk: 1 }, runner: { r: 11, spd: 118, hp: 0.6, atk: 0.8 }, tank: { r: 20, spd: 44, hp: 3, atk: 1.5 }, shooter: { r: 13, spd: 55, hp: 0.8, atk: 0.9 } };
+
+function startBattle(o) {
+  closeModal();
+  const raid = !!o.raid;
+  const ch = raid ? 0 : o.ch, st = raid ? 0 : o.st;
+  const g = raid ? Math.max(0, S.cleared) + 3 : stageG(ch, st);
+  const stats = computeStats();
+  const type = raid ? 'raid' : stageType(st);
+  const theme = raid ? 'abyss' : themeOf(ch);
+  B = { ch, st, g, type, raid, tech: S.tech, stats, theme, time: 0, kills: 0, target: 20 + st * 3, cap: 30 + Math.min(25, ch * 3),
+    p: { x: 0, y: 0, r: 16, hp: stats.maxHp, maxHp: stats.maxHp, face: -Math.PI / 2, mx: 0, my: 0, inv: 0, hurt: 0, atkT: 0.3, avatar: 0, shield: 0, storm: 0, stormT: 0, flameT: 0, flameAng: 0, flameRange: 0, dash: null },
+    enemies: [], eproj: [], pproj: [], fx: [], parts: [], texts: [], zones: [], teles: [], delayed: [],
+    spawnT: 0.6, gold: 0, exp: 0, boss: null, bossSpawned: false, eliteSpawned: false, cds: [0, 0, 0], cdMax: [1, 1, 1],
+    ended: false, endT: 0, win: false, paused: false, cam: { x: 0, y: 0 }, scale: viewScale(), shake: 0, banner: null,
+    tut: S.tut === 0 && ch === 1 && st === 1, tutStep: 0, tutMove: 0, tutT: 0, raidLeft: CONFIG.raidTime, raidDmg: 0,
+    pats: raid ? BOSS_PATS.raid : BOSS_PATS[theme], autoTimer: null };
+  S.stats.plays++;
+  if (raid) { const e = makeEnemy('tank', 0, -300, 'boss'); e.name = '세계수의 그림자'; e.hp = e.maxHp = 1e18; B.enemies.push(e); B.boss = e; B.bossSpawned = true; banner('주간 보스 레이드 · 60초 동안 최대 피해를 입혀라'); }
+  else banner(`${ch}-${st}  ${CH_NAMES[ch - 1]}` + (type === 'boss' ? '  ·  보스전' : type === 'mid' ? '  ·  중간 보스' : ''));
+  $('#lobby').classList.add('hidden'); cv.classList.remove('hidden'); $('#hud').classList.remove('hidden');
+  document.documentElement.style.setProperty('--tc', TECH[S.tech].color);
+  setupHud();
+}
+function makeEnemy(type, x, y, kind) {
+  const M = CONFIG.monster, d = ETYPES[type];
+  const e = { type, kind: kind || 'mob', x, y, r: d.r, spd: d.spd * rand(0.9, 1.1), hp: M.hpBase * Math.pow(M.hpGrowth, B.g) * d.hp, atk: M.atkBase * Math.pow(M.atkGrowth, B.g) * d.atk,
+    hitCd: 0, stun: 0, burn: 0, burnDps: 0, burnTick: 0, kx: 0, ky: 0, flash: 0, shootT: rand(1, 2.5), anim: Math.random() * 6, dead: false, casting: 0, charge: null, patT: 2 };
+  if (e.kind === 'elite') { e.hp *= M.eliteHp; e.atk *= 1.6; e.r = 34; e.spd = 52; e.patT = 2.5; }
+  if (e.kind === 'boss') { e.hp *= M.bossHp; e.atk *= 2; e.r = 46; e.spd = 56; e.patT = 2; }
+  e.maxHp = e.hp; return e;
+}
+function edgePoint() {
+  const hw = W / 2 / B.scale + 40, hh = H / 2 / B.scale + 40, per = Math.random() * (hw + hh) * 2;
+  let x, y; if (per < hw * 2) { x = per - hw; y = Math.random() < 0.5 ? -hh : hh; } else { y = per - hw * 2 - hh; x = Math.random() < 0.5 ? -hw : hw; }
+  return { x: B.p.x + x, y: B.p.y + y };
+}
+function spawnAtRing(type, kind) { const q = edgePoint(), e = makeEnemy(type, q.x, q.y, kind); B.enemies.push(e); return e; }
+function pickType() {
+  const st = B.raid ? 10 : B.st, ch = B.raid ? 9 : B.ch, pool = [['grunt', 5]];
+  if (st >= 3 || ch > 1) pool.push(['runner', 3]); if (st >= 4 || ch > 1) pool.push(['shooter', 2]); if (st >= 6 || ch > 1) pool.push(['tank', 1.2]);
+  let tot = pool.reduce((a, b) => a + b[1], 0), r = Math.random() * tot;
+  for (const [t, w] of pool) { if ((r -= w) < 0) return t; } return 'grunt';
+}
+function banner(txt) { B.banner = { txt, t: 2.4 }; }
+function addFx(f) { B.fx.push(f); }
+function addPart(x, y, vx, vy, life, size, color) { if (B.parts.length > 500) B.parts.shift(); B.parts.push({ x, y, vx, vy, life, max: life, size, color }); }
+function burst(x, y, color, n, spd) { for (let i = 0; i < n; i++) { const a = Math.random() * TAU, s = rand(0.3, 1) * (spd || 160); addPart(x, y, Math.cos(a) * s, Math.sin(a) * s, rand(0.3, 0.6), rand(2, 4), color); } }
+function addText(x, y, txt, color, size) { if (B.texts.length > 70) B.texts.shift(); B.texts.push({ x, y, txt, color, size: size || 13, life: 0.8, vy: -50 }); }
+function later(t, fn) { B.delayed.push({ t, fn }); }
+function nearestEnemy(x, y, maxD) { let best = null, bd = maxD * maxD; for (const e of B.enemies) { if (e.dead) continue; const d = (e.x - x) ** 2 + (e.y - y) ** 2 - e.r * e.r; if (d < bd) { bd = d; best = e; } } return best; }
+const inRadius = (x, y, r) => B.enemies.filter(e => !e.dead && (e.x - x) ** 2 + (e.y - y) ** 2 <= (r + e.r) ** 2);
+const norm = (x, y) => { const l = Math.hypot(x, y) || 1; return { x: x / l, y: y / l }; };
+function boltPts(x1, y1, x2, y2) { const pts = [[x1, y1]], n = 6, dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1, px = -dy / l, py = dx / l; for (let i = 1; i < n; i++) { const t = i / n, j = rand(-12, 12); pts.push([x1 + dx * t + px * j, y1 + dy * t + py * j]); } pts.push([x2, y2]); return pts; }
+
+function dealDamage(e, mult, o) {
+  o = o || {}; if (e.dead) return 0;
+  const st = B.stats; let dmg, crit = false;
+  if (o.flat != null) dmg = o.flat;
+  else { dmg = st.atk * mult * (o.skill ? st.skillDmg : 1) * (B.p.avatar > 0 ? 1.5 : 1); crit = Math.random() < st.critC; if (crit) dmg *= st.critD; dmg *= rand(0.92, 1.08); }
+  e.hp -= dmg; e.flash = 0.08; if (B.raid) B.raidDmg += dmg;
+  if (o.knock && e.kind === 'mob') { const n = norm(e.x - B.p.x, e.y - B.p.y); e.kx += n.x * o.knock * 5; e.ky += n.y * o.knock * 5; }
+  if (o.stun) e.stun = Math.max(e.stun, e.kind === 'mob' ? o.stun : o.stun * 0.3);
+  if (o.burn) { e.burn = 3; e.burnDps = Math.max(e.burnDps * 0.5, st.atk * 0.3 * (1 + st.burnP)); }
+  if (!o.quiet || Math.random() < 0.25) addText(e.x + rand(-10, 10), e.y - e.r - 4, fmt(dmg), crit ? '#ffd34d' : (o.color || '#ffffff'), crit ? 18 : 13);
+  if (e.hp <= 0) killEnemy(e);
+  return dmg;
+}
+function killEnemy(e) {
+  e.dead = true; const m = e.kind === 'boss' ? 40 : e.kind === 'elite' ? 10 : 1;
+  B.gold += goldPerKill(B.g) * m * (1 + B.stats.goldP); B.exp += expPerKill(B.g) * m;
+  if (e.kind === 'mob') B.kills++;
+  burst(e.x, e.y, THEMES[B.theme].mob[e.type], e.kind === 'mob' ? 10 : 40, e.kind === 'mob' ? 150 : 300);
+  if (e.kind === 'elite' && B.type === 'mid') { banner('중간 보스 처치!'); endBattle(true); }
+  if (e.kind === 'boss' && B.type === 'boss') { banner('보스 처치!'); B.shake = 14; endBattle(true); }
+}
+function hurtPlayer(raw, src) {
+  const p = B.p; if (p.inv > 0 || B.ended || p.dash) return;
+  const st = B.stats, K = 50 * Math.pow(CONFIG.monster.atkGrowth, B.g);
+  let dmg = raw * (K / (K + st.def)) * (1 - Math.min(0.85, st.dr + (p.shield > 0 ? 0.6 : 0)));
+  p.hp -= dmg; p.hurt = 0.15; B.shake = Math.max(B.shake, 5);
+  addText(p.x + rand(-6, 6), p.y - 26, '-' + fmt(dmg), '#ff6b6b', 14);
+  const refl = st.reflect + (p.shield > 0 && B.tech === 'earth' ? 1 : 0);
+  if (refl > 0 && src && !src.dead) dealDamage(src, 0, { flat: raw * refl, color: '#b9f07c' });
+  if (p.hp <= 0) { p.hp = 0; burst(p.x, p.y, TECH[B.tech].color, 40, 260); endBattle(false); }
+}
+
+/* ---------- skills ---------- */
+function aimDir(preferMove, away) {
+  const p = B.p; if (preferMove && (Math.abs(p.mx) + Math.abs(p.my) > 0.1)) return norm(p.mx, p.my);
+  const n = nearestEnemy(p.x, p.y, 700); if (n) { const d = norm(n.x - p.x, n.y - p.y); return away ? { x: -d.x, y: -d.y } : d; }
+  return { x: Math.cos(p.face), y: Math.sin(p.face) };
+}
+const SKILL = {
+  dash() { const d = aimDir(true); B.p.dash = { dx: d.x, dy: d.y, t: 0.2, hit: new Set() }; B.p.face = Math.atan2(d.y, d.x); addFx({ type: 'ring', x: B.p.x, y: B.p.y, r0: 10, r1: 60, life: 0.25, max: 0.25, color: TECH.beast.color }); },
+  roar() { const p = B.p; inRadius(p.x, p.y, 170).forEach(e => dealDamage(e, 1.5, { skill: true, stun: 1.5, knock: 30 })); addFx({ type: 'ring', x: p.x, y: p.y, r0: 20, r1: 175, life: 0.4, max: 0.4, color: '#ffd08a', w: 8 }); B.shake = 8; },
+  avatar() { B.p.avatar = 8; addFx({ type: 'ring', x: B.p.x, y: B.p.y, r0: 10, r1: 220, life: 0.6, max: 0.6, color: TECH.beast.color, w: 10 }); burst(B.p.x, B.p.y, '#ffcf8a', 50, 320); B.shake = 10; banner('대자연의 화신!'); },
+  quake() { const p = B.p; inRadius(p.x, p.y, 180).forEach(e => dealDamage(e, 2.0, { skill: true, knock: 140 })); addFx({ type: 'ring', x: p.x, y: p.y, r0: 20, r1: 185, life: 0.45, max: 0.45, color: '#b9f07c', w: 12 }); addFx({ type: 'spikes', x: p.x, y: p.y, r: 170, n: 14, life: 0.5, max: 0.5, color: '#9bc76a' }); B.shake = 10; },
+  thorn() { const p = B.p; p.shield = 5; inRadius(p.x, p.y, 260).forEach(e => { if (e.kind === 'mob') { const n = norm(p.x - e.x, p.y - e.y); e.kx += n.x * 300; e.ky += n.y * 300; } }); addFx({ type: 'ring', x: p.x, y: p.y, r0: 260, r1: 30, life: 0.4, max: 0.4, color: '#8cc65a', w: 6 }); },
+  mountain() { const p = B.p, x = p.x, y = p.y; for (let k = 0; k < 3; k++) later(0.25 * k, () => { const r = 130 + k * 110; inRadius(x, y, r).forEach(e => dealDamage(e, 4.0, { skill: true, knock: 60 })); addFx({ type: 'ring', x, y, r0: r - 60, r1: r, life: 0.4, max: 0.4, color: '#c9f08a', w: 16 }); addFx({ type: 'spikes', x, y, r, n: 18 + k * 6, life: 0.6, max: 0.6, color: '#a5c978' }); B.shake = 12; }); banner('산맥 소환!'); },
+  blink() { const p = B.p, d = aimDir(true, true), ox = p.x, oy = p.y; p.x += d.x * 210; p.y += d.y * 210; p.inv = 0.35; addFx({ type: 'bolt', pts: boltPts(ox, oy, p.x, p.y), life: 0.25, max: 0.25, color: '#bfe3ff', w: 4 }); inRadius(p.x, p.y, 130).forEach(e => dealDamage(e, 2.2, { skill: true, color: '#bfe3ff' })); addFx({ type: 'ring', x: p.x, y: p.y, r0: 10, r1: 135, life: 0.35, max: 0.35, color: TECH.spirit.color, w: 8 }); burst(p.x, p.y, '#bfe3ff', 20, 220); },
+  storm() { B.p.storm = 6; B.p.stormT = 0; },
+  judge() { banner('천벌!'); for (let k = 0; k < 3; k++) later(0.3 * k, () => { const es = inRadius(B.p.x, B.p.y, 760); es.forEach((e, i) => { dealDamage(e, 3.0, { skill: true, color: '#bfe3ff' }); if (i < 25) addFx({ type: 'bolt', pts: boltPts(e.x + rand(-30, 30), e.y - 320, e.x, e.y), life: 0.22, max: 0.22, color: '#d8eeff', w: 3 }); }); B.shake = 9; B.flash = 0.12; }); },
+  field() { const p = B.p; B.zones.push({ kind: 'fire', x: p.x, y: p.y, r: 130, life: 5, max: 5, tick: 0 }); },
+  fireball() { const p = B.p, n = nearestEnemy(p.x, p.y, 520), d = n ? norm(n.x - p.x, n.y - p.y) : aimDir(false); B.pproj.push({ x: p.x, y: p.y, vx: d.x * 540, vy: d.y * 540, life: 1.3, aoe: 95, mult: 3.0 }); },
+  meteor() {
+    const p = B.p, es = inRadius(p.x, p.y, 420).sort(() => Math.random() - 0.5); banner('메테오!');
+    for (let k = 0; k < 6; k++) { const t = es[k] || { x: p.x + rand(-260, 260), y: p.y + rand(-260, 260) }; const x = t.x, y = t.y; addFx({ type: 'mark', x, y, r: 140, life: 0.6 + k * 0.12, max: 0.6 + k * 0.12, color: '#ff7a3d' });
+      later(0.6 + k * 0.12, () => { inRadius(x, y, 140).forEach(e => dealDamage(e, 4.0, { skill: true, burn: true, color: '#ffb37a' })); addFx({ type: 'boom', x, y, r: 150, life: 0.4, max: 0.4, color: '255,140,60' }); burst(x, y, '#ffb347', 25, 300); B.shake = 10; }); }
+  },
+};
+function useSkill(i) {
+  if (!B || B.ended || B.paused || !skillUnlocked(i, B.tech) || B.cds[i] > 0) return;
+  const sk = TECH[B.tech].skills[i]; SKILL[sk.id]();
+  let cd = sk.cd * (1 - B.stats.cdr); if (i === 2) cd *= (1 - B.stats.ultCdr);
+  B.cds[i] = B.cdMax[i] = cd;
+  if (B.tut && B.tutStep === 2) { B.tutStep = 3; B.tutT = 0; }
+}
+
+/* ---------- auto battle ---------- */
+function autoMove() {
+  const p = B.p, ranged = B.tech === 'spirit'; let ax = 0, ay = 0;
+  const pref = B.tech === 'spirit' ? 260 : B.tech === 'earth' ? 150 : B.tech === 'fire' ? 120 : 50;
+  const danger = B.tech === 'spirit' ? 150 : B.tech === 'fire' ? 70 : 30;
+  for (const e of B.enemies) { const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1, lim = danger + e.r + (e.kind !== 'mob' ? 40 : 0); if (d < lim) { const w = (lim - d) / lim; ax += dx / d * w * 2.2; ay += dy / d * w * 2.2; } }
+  for (const t of B.teles) {
+    if (t.kind === 'circle') { const dx = p.x - t.x, dy = p.y - t.y, d = Math.hypot(dx, dy) || 1; if (d < t.r + 30) { ax += dx / d * 5; ay += dy / d * 5; } }
+    else { const ux = Math.cos(t.ang), uy = Math.sin(t.ang), rx = p.x - t.x, ry = p.y - t.y, along = rx * ux + ry * uy, perp = -rx * uy + ry * ux; if (along > -20 && along < t.len + 20 && Math.abs(perp) < t.w) { const s = perp >= 0 ? 1 : -1; ax += -uy * s * 5; ay += ux * s * 5; } }
+  }
+  for (const b of B.eproj) { const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy); if (d < 90) { const n = norm(-b.vy, b.vx), s = (dx * n.x + dy * n.y) >= 0 ? 1 : -1; ax += n.x * s * 1.5; ay += n.y * s * 1.5; } }
+  const near = (B.boss && !B.boss.dead) ? B.boss : nearestEnemy(p.x, p.y, 2000);
+  if (near) { const dx = near.x - p.x, dy = near.y - p.y, d = Math.hypot(dx, dy) || 1; if (d > pref + near.r) { ax += dx / d; ay += dy / d; } else if (ranged && d < pref * 0.6) { ax -= dx / d * 0.7; ay -= dy / d * 0.7; } }
+  const l = Math.hypot(ax, ay); return l > 1 ? { x: ax / l, y: ay / l } : { x: ax, y: ay };
+}
+function autoSkills() {
+  const p = B.p, near = inRadius(p.x, p.y, 220).length, boss = B.boss && !B.boss.dead ? B.boss : null, bd = boss ? Math.hypot(boss.x - p.x, boss.y - p.y) : 1e9;
+  for (let i = 0; i < 3; i++) {
+    if (!skillUnlocked(i, B.tech) || B.cds[i] > 0) continue; const id = TECH[B.tech].skills[i].id;
+    if (i === 2) { if (near >= 6 || bd < 380) useSkill(i); continue; }
+    if (id === 'blink') { if (near >= 4 || p.hp < p.maxHp * 0.5 && near >= 1) useSkill(i); continue; }
+    if (id === 'thorn') { if (near >= 3 || p.hp < p.maxHp * 0.6) useSkill(i); continue; }
+    if (id === 'fireball' || id === 'dash' || id === 'storm') { if (nearestEnemy(p.x, p.y, 380)) useSkill(i); continue; }
+    if (near >= 3 || bd < 220) useSkill(i);
+  }
+}
+
+/* ---------- boss ---------- */
+function bossAI(e, dt) {
+  const p = B.p;
+  if (e.charge) { e.x += e.charge.vx * dt; e.y += e.charge.vy * dt; e.charge.t -= dt; if (Math.random() < 0.5) addPart(e.x, e.y, rand(-30, 30), rand(-30, 30), 0.4, 4, '#ff7a7a'); if (e.charge.t <= 0) e.charge = null; return; }
+  if (e.casting > 0) { e.casting -= dt; return; }
+  const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
+  if (d > e.r + p.r + 10) { e.x += dx / d * e.spd * dt; e.y += dy / d * e.spd * dt; }
+  e.patT -= dt;
+  if (e.patT <= 0) { const pats = e.kind === 'elite' ? ['slam', 'summon'] : B.pats; bossPattern(e, pick(pats)); e.patT = e.kind === 'elite' ? 3.5 : rand(2.1, 3.0) * (B.raid ? 0.8 : 1); }
+}
+function eShoot(x, y, ang, spd, dmg) { B.eproj.push({ x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, r: 7, dmg, life: 5 }); }
+function bossPattern(e, pat) {
+  const p = B.p;
+  switch (pat) {
+    case 'slam': B.teles.push({ kind: 'circle', x: p.x, y: p.y, r: 110, t: 0, delay: 1.0, dmg: e.atk * 1.6 }); e.casting = 0.5; break;
+    case 'multi': for (let k = 0; k < 4; k++) B.teles.push({ kind: 'circle', x: p.x + rand(-150, 150), y: p.y + rand(-150, 150), r: 80, t: 0, delay: rand(0.9, 1.4), dmg: e.atk * 1.3 }); e.casting = 0.6; break;
+    case 'ring': { const n = 14, o = Math.random() * TAU; for (let k = 0; k < n; k++) eShoot(e.x, e.y, o + k / n * TAU, 170, e.atk * 0.7); e.casting = 0.4; break; }
+    case 'spiral': { const base = Math.random() * TAU; for (let k = 0; k < 15; k++) later(k * 0.1, () => { if (e.dead) return; for (let j = 0; j < 3; j++) eShoot(e.x, e.y, base + k * 0.35 + j * TAU / 3, 190, e.atk * 0.6); }); e.casting = 1.5; break; }
+    case 'summon': { if (B.enemies.length < 70) for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; B.enemies.push(makeEnemy(pickType(), e.x + Math.cos(a) * (e.r + 40), e.y + Math.sin(a) * (e.r + 40), 'mob')); } addFx({ type: 'ring', x: e.x, y: e.y, r0: e.r, r1: e.r + 80, life: 0.5, max: 0.5, color: '#ff8a8a', w: 5 }); e.casting = 0.5; break; }
+    case 'charge': { const ang = Math.atan2(p.y - e.y, p.x - e.x); B.teles.push({ kind: 'line', x: e.x, y: e.y, ang, len: 450, w: e.r * 0.9, t: 0, delay: 0.8, on: () => { if (!e.dead) e.charge = { vx: Math.cos(ang) * 900, vy: Math.sin(ang) * 900, t: 0.5 }; } }); e.casting = 0.8; break; }
+  }
+}
+
+/* ---------- update ---------- */
+function update(dt) {
+  B.shake = Math.max(0, B.shake - dt * 30); if (B.flash) B.flash = Math.max(0, B.flash - dt);
+  if (B.banner) { B.banner.t -= dt; if (B.banner.t <= 0) B.banner = null; }
+  if (B.ended) { B.endT += dt; updFx(dt); return; }
+  B.time += dt; const p = B.p, st = B.stats;
+  let mx = 0, my = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp')) my -= 1; if (keys.has('KeyS') || keys.has('ArrowDown')) my += 1;
+  if (keys.has('KeyA') || keys.has('ArrowLeft')) mx -= 1; if (keys.has('KeyD') || keys.has('ArrowRight')) mx += 1;
+  if (joy.active) { const dx = joy.x - joy.bx, dy = joy.y - joy.by, d = Math.hypot(dx, dy); if (d > 8) { const m = Math.min(1, d / 60); mx += dx / d * m; my += dy / d * m; } }
+  const manual = Math.abs(mx) + Math.abs(my) > 0;
+  if (!manual && S.settings.auto) { const a = autoMove(); mx = a.x; my = a.y; }
+  const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
+  p.mx = mx; p.my = my;
+  if (B.tut) tutUpdate(dt, manual);
+  p.inv = Math.max(0, p.inv - dt); p.hurt = Math.max(0, p.hurt - dt); if (p.avatar > 0) p.avatar -= dt; if (p.shield > 0) p.shield -= dt;
+  for (let i = 0; i < 3; i++) B.cds[i] = Math.max(0, B.cds[i] - dt);
+  if (p.dash) {
+    p.x += p.dash.dx * 1300 * dt; p.y += p.dash.dy * 1300 * dt; p.dash.t -= dt;
+    addPart(p.x, p.y, rand(-40, 40), rand(-40, 40), 0.35, 5, TECH.beast.color);
+    for (const e of B.enemies) if (!e.dead && !p.dash.hit.has(e) && Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r + 16) { p.dash.hit.add(e); dealDamage(e, 2.5, { skill: true, knock: 80 }); }
+    if (p.dash.t <= 0) { p.dash = null; p.inv = Math.max(p.inv, 0.1); }
+  } else { const sp = st.spd * (p.avatar > 0 ? 1.2 : 1); p.x += mx * sp * dt; p.y += my * sp * dt; if (ml > 0.1) p.face = Math.atan2(my, mx); }
+  if (S.settings.auto) autoSkills();
+  playerAttack(dt);
+  if (p.storm > 0) { p.storm -= dt; p.stormT -= dt; if (p.stormT <= 0) { p.stormT = 0.35; const es = inRadius(p.x, p.y, 320); if (es.length) { const e = pick(es); dealDamage(e, 1.0, { skill: true, color: '#bfe3ff' }); inRadius(e.x, e.y, 45).forEach(o => { if (o !== e) dealDamage(o, 0.5, { skill: true, quiet: true }); }); addFx({ type: 'bolt', pts: boltPts(p.x + rand(-40, 40), p.y - 110, e.x, e.y), life: 0.18, max: 0.18, color: '#d8eeff', w: 3 }); } } }
+  for (const z of B.zones) { z.life -= dt; z.tick -= dt; if (z.tick <= 0) { z.tick = 0.5; inRadius(z.x, z.y, z.r).forEach(e => dealDamage(e, 0.8, { skill: true, burn: true, quiet: true, color: '#ffb37a' })); } if (Math.random() < 0.7) addPart(z.x + rand(-z.r, z.r) * 0.8, z.y + rand(-z.r, z.r) * 0.8, 0, -rand(30, 70), 0.5, rand(3, 6), pick(['#ff7a3d', '#ffb347', '#ffd27a'])); }
+  B.zones = B.zones.filter(z => z.life > 0);
+  for (const d of B.delayed) { d.t -= dt; if (d.t <= 0) d.fn(); } B.delayed = B.delayed.filter(d => d.t > 0);
+  spawnUpdate(dt);
+  updEnemies(dt);
+  for (const b of B.eproj) { b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (Math.hypot(b.x - p.x, b.y - p.y) < b.r + p.r) { b.life = 0; hurtPlayer(b.dmg, null); } }
+  B.eproj = B.eproj.filter(b => b.life > 0);
+  for (const b of B.pproj) {
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; addPart(b.x, b.y, rand(-20, 20), rand(-20, 20), 0.3, 5, pick(['#ff7a3d', '#ffd27a']));
+    const hit = B.enemies.find(e => !e.dead && Math.hypot(e.x - b.x, e.y - b.y) < e.r + 10);
+    if (hit || b.life <= 0) { b.life = 0; inRadius(b.x, b.y, b.aoe).forEach(e => dealDamage(e, b.mult, { skill: true, burn: true, color: '#ffb37a' })); addFx({ type: 'boom', x: b.x, y: b.y, r: b.aoe, life: 0.35, max: 0.35, color: '255,140,60' }); burst(b.x, b.y, '#ffb347', 18, 240); B.shake = 5; }
+  }
+  B.pproj = B.pproj.filter(b => b.life > 0);
+  for (const t of B.teles) {
+    t.t += dt;
+    if (t.t >= t.delay) { t.done = true; if (t.kind === 'circle') { if (Math.hypot(p.x - t.x, p.y - t.y) < t.r + p.r * 0.4) hurtPlayer(t.dmg, null); addFx({ type: 'boom', x: t.x, y: t.y, r: t.r, life: 0.3, max: 0.3, color: '255,80,80' }); B.shake = Math.max(B.shake, 6); } if (t.on) t.on(); }
+  }
+  B.teles = B.teles.filter(t => !t.done);
+  if (B.raid) { B.raidLeft -= dt; if (B.raidLeft <= 0) { B.raidLeft = 0; banner('레이드 종료!'); endBattle(true); } }
+  stageLogic();
+  B.cam.x += (p.x - B.cam.x) * Math.min(1, dt * 8); B.cam.y += (p.y - B.cam.y) * Math.min(1, dt * 8);
+  updFx(dt);
+}
+function updFx(dt) {
+  for (const f of B.fx) f.life -= dt; B.fx = B.fx.filter(f => f.life > 0);
+  for (const q of B.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.94; q.vy *= 0.94; q.life -= dt; } B.parts = B.parts.filter(q => q.life > 0);
+  for (const t of B.texts) { t.y += t.vy * dt; t.vy *= 0.94; t.life -= dt; } B.texts = B.texts.filter(t => t.life > 0);
+}
+function playerAttack(dt) {
+  const p = B.p, st = B.stats, T = TECH[B.tech], A = T.attack, av = p.avatar > 0;
+  if (p.flameT > 0) { p.flameT -= dt; for (let k = 0; k < 3; k++) { const a = p.flameAng + rand(-0.4, 0.4), s = rand(0.5, 1) * p.flameRange * 2.4; addPart(p.x + Math.cos(p.flameAng) * 16, p.y + Math.sin(p.flameAng) * 16, Math.cos(a) * s, Math.sin(a) * s, 0.35, rand(4, 8), pick(['#ff5a1f', '#ff9a3d', '#ffd27a'])); } }
+  p.atkT -= dt * st.aspd * (av ? 2 : 1);
+  if (p.atkT > 0 || p.dash) return;
+  const range = A.range * (B.tech === 'fire' ? 1 + st.rangeP : 1) * (av ? 1.3 : 1);
+  const tgt = nearestEnemy(p.x, p.y, range + 10);
+  if (!tgt) { p.atkT = 0.05; return; }
+  const ang = Math.atan2(tgt.y - p.y, tgt.x - p.x); if (Math.hypot(p.mx, p.my) < 0.1) p.face = ang;
+  p.atkT = A.cd;
+  switch (B.tech) {
+    case 'beast': { for (const e of B.enemies) { if (e.dead) continue; const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy); if (d > range + e.r) continue; if (Math.abs(angDiff(Math.atan2(dy, dx), ang)) < 1.0 || d < e.r + p.r + 6) dealDamage(e, 1.0, { knock: 25 }); } addFx({ type: 'arc', x: p.x, y: p.y, ang, r: range, life: 0.16, max: 0.16, color: av ? '#ffd08a' : T.color }); break; }
+    case 'earth': { inRadius(tgt.x, tgt.y, 55).forEach(e => dealDamage(e, 1.3)); addFx({ type: 'spikes', x: tgt.x, y: tgt.y, r: 45, n: 6, life: 0.35, max: 0.35, color: '#a5c978' }); break; }
+    case 'spirit': { let cur = tgt, mult = 0.9, px = p.x, py = p.y; const hit = new Set([tgt]), n = 2 + st.chain; for (let k = 0; k <= n && cur; k++) { dealDamage(cur, mult, { color: '#bfe3ff' }); addFx({ type: 'bolt', pts: boltPts(px, py, cur.x, cur.y), life: 0.16, max: 0.16, color: T.color, w: 2.5 }); px = cur.x; py = cur.y; mult *= 0.85; let nx = null, nd = 160 * 160; for (const e of B.enemies) { if (hit.has(e) || e.dead) continue; const d = (e.x - px) ** 2 + (e.y - py) ** 2; if (d < nd) { nd = d; nx = e; } } cur = nx; if (nx) hit.add(nx); } break; }
+    case 'fire': { for (const e of B.enemies) { if (e.dead) continue; const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy); if (d > range + e.r) continue; if (Math.abs(angDiff(Math.atan2(dy, dx), ang)) < 0.45 || d < e.r + p.r + 4) dealDamage(e, 0.22, { burn: true, quiet: true, color: '#ffb37a' }); } p.flameT = 0.2; p.flameAng = ang; p.flameRange = range; break; }
+  }
+}
+function spawnUpdate(dt) {
+  B.spawnT -= dt; if (B.spawnT > 0) return;
+  const alive = B.enemies.filter(e => e.kind === 'mob' && !e.dead).length;
+  const bossMode = B.type === 'boss' || B.type === 'raid' || (B.type === 'mid' && B.eliteSpawned);
+  if (bossMode) { if (alive >= (B.raid ? 18 : 12)) { B.spawnT = 1; return; } }
+  else { const remain = B.target - B.kills; if (alive >= Math.min(B.cap, remain)) { B.spawnT = 0.3; return; } }
+  const n = 1 + Math.floor(Math.random() * (1 + Math.min(3, (B.st || 8) / 3)));
+  for (let k = 0; k < n; k++) spawnAtRing(pickType(), 'mob');
+  B.spawnT = bossMode ? 2.4 : Math.max(0.35, 0.95 - B.st * 0.05 - B.ch * 0.02);
+}
+function updEnemies(dt) {
+  const p = B.p, farR = Math.hypot(W, H) / B.scale + 300;
+  for (const e of B.enemies) {
+    if (e.dead) continue; e.anim += dt; e.flash -= dt; e.hitCd -= dt;
+    if (e.burn > 0) { e.burn -= dt; e.burnTick -= dt; if (e.burnTick <= 0) { e.burnTick = 0.5; dealDamage(e, 0, { flat: e.burnDps * 0.5, color: '#ff9a4d', quiet: true }); if (e.dead) continue; } if (Math.random() < 0.15) addPart(e.x + rand(-e.r, e.r), e.y, 0, -40, 0.4, 3, '#ff7a3d'); }
+    if (e.kx || e.ky) { e.x += e.kx * dt; e.y += e.ky * dt; const f = Math.pow(0.01, dt); e.kx *= f; e.ky *= f; if (Math.abs(e.kx) + Math.abs(e.ky) < 4) e.kx = e.ky = 0; }
+    const dx = p.x - e.x, dy = p.y - e.y, d = Math.hypot(dx, dy) || 1;
+    if (e.kind === 'mob' && d > farR) { const q = edgePoint(); e.x = q.x; e.y = q.y; continue; }
+    if (e.stun > 0) e.stun -= dt;
+    else if (e.kind !== 'mob') bossAI(e, dt);
+    else {
+      let sp = e.spd;
+      if (e.type === 'shooter') { if (d < 190) sp = -e.spd * 0.6; else if (d < 260) sp = 0; e.shootT -= dt; if (e.shootT <= 0 && d < 430) { e.shootT = rand(2, 2.6); eShoot(e.x, e.y, Math.atan2(dy, dx), 210, e.atk * 0.9); } }
+      e.x += dx / d * sp * dt; e.y += dy / d * sp * dt;
+    }
+    if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r && e.hitCd <= 0) { e.hitCd = 0.7; hurtPlayer(e.atk * (e.charge ? 2 : 1), e); }
+  }
+  const a = B.enemies;
+  for (let i = 0; i < a.length; i++) { const A = a[i]; if (A.dead) continue; for (let j = i + 1; j < a.length; j++) { const C = a[j]; if (C.dead) continue; const dx = C.x - A.x, dy = C.y - A.y, rr = A.r + C.r, d2 = dx * dx + dy * dy; if (d2 < rr * rr && d2 > 0.01) { const d = Math.sqrt(d2), o = (rr - d) / 2, ux = dx / d, uy = dy / d, wa = A.kind === 'mob' ? 1 : 0.05, wb = C.kind === 'mob' ? 1 : 0.05; A.x -= ux * o * wa; A.y -= uy * o * wa; C.x += ux * o * wb; C.y += uy * o * wb; } } }
+  B.enemies = B.enemies.filter(e => !e.dead);
+}
+function stageLogic() {
+  if (B.ended) return;
+  if (B.type === 'normal' && B.kills >= B.target) { banner('스테이지 클리어!'); endBattle(true); }
+  else if (B.type === 'mid' && !B.eliteSpawned && B.kills >= B.target) { B.eliteSpawned = true; const a = Math.random() * TAU; const e = makeEnemy('tank', B.p.x + Math.cos(a) * 300, B.p.y + Math.sin(a) * 300, 'elite'); e.name = '중간 보스 · ' + SETS[B.ch - 1] + ' 정예'; B.enemies.push(e); B.boss = e; banner('중간 보스 등장!'); }
+  else if (B.type === 'boss' && !B.bossSpawned && B.time > 1.0) { B.bossSpawned = true; const a = Math.random() * TAU; const e = makeEnemy('tank', B.p.x + Math.cos(a) * 320, B.p.y + Math.sin(a) * 320, 'boss'); e.name = BOSS_NAMES[(B.ch - 1) % 10]; B.enemies.push(e); B.boss = e; banner('BOSS · ' + e.name); }
+}
+function tutUpdate(dt, manual) {
+  if (B.tutStep === 0) { if (manual) B.tutMove += dt; if (B.tutMove > 0.8) B.tutStep = 1; }
+  else if (B.tutStep === 1) { if (B.kills >= 4) B.tutStep = 2; }
+  else if (B.tutStep === 3) { B.tutT += dt; if (B.tutT > 4) B.tutStep = 4; }
+}
+const TUT_TXT = ['WASD / 방향키로 이동해요<br><small>모바일: 화면 아무 곳이나 드래그</small>', '기본 공격은 가까운 적에게 <b>자동</b>으로 나가요', '스킬 버튼(또는 Space / 1키)으로<br><b>야수 돌진</b>을 써보세요!', '목표 처치 수를 채우면 클리어!'];
+
+/* ---------- end of battle ---------- */
+function endBattle(win) {
+  if (B.ended) return; B.ended = true; B.win = win;
+  const r = { gold: B.gold, exp: B.exp, stone: 0, dia: 0, sp: 0 }, msgs = [], items = [];
+  S.daily.kills += B.kills; S.stats.kills += B.kills;
+  if (B.raid) {
+    const ref = CONFIG.monster.hpBase * Math.pow(CONFIG.monster.hpGrowth, B.g) * CONFIG.monster.bossHp, ratio = B.raidDmg / ref;
+    r.gold += goldPerKill(B.g) * 50 * (1 + ratio); r.stone += 10 + Math.floor(ratio * 10); r.dia += 20 + Math.min(80, Math.floor(ratio * 20));
+    const lg = Math.random() * 100 < CONFIG.drop.raidLegend; const it = makeItem(lg ? 3 : 2, B.g, 9); if (addItem(it, msgs)) items.push(it);
+    if (B.raidDmg > S.raid.best) { S.raid.best = B.raidDmg; msgs.push('레이드 최고 기록 갱신!'); }
+  } else if (win) {
+    r.gold += goldPerKill(B.g) * 15; r.exp += expPerKill(B.g) * 10;
+    r.stone += B.type === 'boss' ? 15 + B.ch * 5 : B.type === 'mid' ? 5 + B.ch * 2 : (Math.random() < 0.5 ? 2 : 1);
+    let grade = rollNormalDrop();
+    if (B.type === 'mid') grade = Math.max(1, grade);
+    if (B.type === 'boss') grade = Math.max(2, grade);
+    if (grade >= 0) { const it = makeItem(grade, B.g, B.ch - 1); if (addItem(it, msgs)) items.push(it); }
+    S.daily.clears++;
+    if (B.g > S.cleared) {
+      S.cleared = B.g;
+      if (B.type === 'boss') {
+        r.dia += 50; r.sp += CONFIG.spPerChapterClear; msgs.push(`챕터 ${B.ch} 최초 클리어! 다이아 50 · 스킬포인트 +${CONFIG.spPerChapterClear}`);
+        TECH_ORDER.forEach(id => { if (TECH[id].unlockCh === B.ch) msgs.push(`새 테크 해금: ${TECH[id].name}`); });
+      } else if (B.type === 'mid') { r.dia += 10; msgs.push('중간 보스 최초 처치! 다이아 10'); }
+      if (S.cleared === 0) S.idleAt = Date.now();
+    }
+  }
+  r.gold = Math.floor(r.gold); r.exp = Math.floor(r.exp);
+  grant(r, msgs);
+  const wasTut = B.tut && win; if (wasTut) S.tut = 1;
+  save();
+  B.result = { r, msgs, items, wasTut };
+  setTimeout(showResult, 900);
+}
+function showResult() {
+  if (!B || !B.result) return; const { r, msgs, items } = B.result, win = B.win, raid = B.raid;
+  const title = raid ? '레이드 종료' : win ? '스테이지 클리어!' : '사냥 실패';
+  let h = `<h2 class="${win ? 'win' : 'lose'}">${title}</h2><div class="sub">${raid ? '주간 보스 레이드 · 누적 피해 ' + fmt(B.raidDmg) : `${B.ch}-${B.st} ${CH_NAMES[B.ch - 1]}`} · 처치 ${B.kills}</div>`;
+  h += `<div class="rw"><div><span>골드</span><i class="ic gold"></i>${fmt(r.gold)}</div><div><span>EXP</span>${fmt(r.exp)}</div>`;
+  if (r.stone) h += `<div><span>스톤</span><i class="ic stone"></i>${fmt(r.stone)}</div>`;
+  if (r.dia) h += `<div><span>다이아</span><i class="ic dia"></i>${fmt(r.dia)}</div>`;
+  if (r.sp) h += `<div><span>스킬포인트</span><i class="ic sp"></i>${r.sp}</div>`;
+  h += `</div>`;
+  if (items.length) h += items.map(it => `<div class="opt" style="border:1px solid ${GRADES[it.grade].color}"><span class="g" style="color:${GRADES[it.grade].color}">${GRADES[it.grade].name}</span><b style="color:${GRADES[it.grade].color}">${itemName(it)}</b><span class="muted" style="margin-left:auto">${SLOT_LABEL[it.slot]} · 옵션 ${it.opts.length}</span></div>`).join('');
+  if (msgs.length) h += `<div class="msgs">${msgs.map(m => `<div>${m}</div>`).join('')}</div>`;
+  if (!win) h += `<div class="muted" style="margin-top:8px">처치한 몬스터의 골드·EXP는 그대로 받았어요.<br>추천: 스킬트리 투자 · 장비 강화 · 기본 강화 후 재도전</div>`;
+  const canNext = win && !raid && (B.g + 1) <= S.cleared + 1 && B.g + 1 < CONFIG.maxChapter * 10;
+  if (B.result.wasTut) { showModal(h + `<div class="mbtns"><button class="btn pri" data-act="res-lobby">스킬트리 배우러 가기</button></div>`, { closable: false }); return; }
+  h += `<div class="mbtns">`;
+  if (!raid) h += `<button class="btn" data-act="res-retry">다시 하기</button>`;
+  if (canNext) h += `<button class="btn pri" data-act="res-next">다음 스테이지</button>`;
+  h += `<button class="btn" data-act="res-lobby">로비로</button></div>`;
+  const auto = S.settings.autoNext && win && !raid && !B.result.wasTut;
+  if (auto) h += `<div class="muted" style="text-align:center;margin-top:10px" id="autoCd">${S.settings.repeat ? '반복 사냥' : '자동 진행'}: 3초 후 시작</div>`;
+  showModal(h, { closable: false });
+  if (auto) { let n = 3; B.autoTimer = setInterval(() => { n--; const el = $('#autoCd'); if (el) el.textContent = `${S.settings.repeat ? '반복 사냥' : '자동 진행'}: ${n}초 후 시작`; if (n <= 0) { clearInterval(B.autoTimer); ACT[S.settings.repeat || !canNext ? 'res-retry' : 'res-next'](); } }, 1000); }
+}
+function leaveBattle() {
+  if (B && B.autoTimer) clearInterval(B.autoTimer);
+  B = null; joy.active = false; closeModal();
+  cv.classList.add('hidden'); $('#hud').classList.add('hidden'); $('#lobby').classList.remove('hidden');
+  if (S.tut === 1) { UI.tab = 'tree'; UI.treeTech = 'beast'; UI.node = 'core'; }
+  renderLobby();
+}
+function togglePause() {
+  if (!B || B.ended) return;
+  B.paused = !B.paused;
+  if (B.paused) showModal(`<h2>일시정지</h2><div class="sub">${B.raid ? '주간 보스 레이드' : `${B.ch}-${B.st} ${CH_NAMES[B.ch - 1]}`}</div>
+    <div class="muted" style="text-align:center;line-height:1.8">PC: WASD/방향키 이동 · 1/2/3 또는 J/K/L 스킬 · Space 스킬1 · P 일시정지<br>모바일: 화면 드래그로 이동, 오른쪽 아래 버튼으로 스킬</div>
+    <div class="mbtns"><button class="btn" data-act="giveup">${B.raid ? '레이드 종료' : '포기하고 로비로'}</button><button class="btn pri" data-act="resume">계속하기</button></div>`, { closable: false });
+  else closeModal();
+}
+
+/* ---------- HUD ---------- */
+let hudT = 0;
+function setupHud() {
+  const T = TECH[B.tech];
+  $('#skills').innerHTML = T.skills.map((s, i) => skillUnlocked(i, B.tech) ? `<button class="skb ${i === 2 ? 'ult' : ''}" data-act="skill" data-i="${i}"><span class="nm">${s.name}</span><div class="cd"></div><div class="ct"></div><span class="ky">${i + 1}</span></button>` : '').reverse().join('');
+  $('#hAuto').classList.toggle('on', S.settings.auto); $('#hSpd').textContent = 'x' + S.settings.speed; $('#hSpd').classList.toggle('on', S.settings.speed > 1);
+  $('#bossBar').classList.add('hidden'); $('#hint').classList.add('hidden');
+  $('#hStage').textContent = B.raid ? '주간 보스 레이드' : `${B.ch}-${B.st}  ${CH_NAMES[B.ch - 1]}`;
+  $('#hLv').textContent = `Lv.${S.lvl} ${T.name}`;
+}
+function hudUpdate() {
+  const now = performance.now(); if (now - hudT < 80) return; hudT = now;
+  const p = B.p;
+  $('#hHp').style.width = (p.hp / p.maxHp * 100) + '%'; $('#hHpTxt').textContent = `${fmt(p.hp)} / ${fmt(p.maxHp)}`;
+  let prog = 0, txt = '';
+  if (B.raid) { prog = B.raidLeft / CONFIG.raidTime; txt = `남은 시간 ${Math.ceil(B.raidLeft)}초`; }
+  else if (B.type === 'boss') { prog = B.boss ? 1 - Math.max(0, B.boss.hp) / B.boss.maxHp : 0; txt = '보스전'; }
+  else if (B.type === 'mid' && B.eliteSpawned) { prog = 1; txt = '중간 보스 처치'; }
+  else { prog = B.kills / B.target; txt = `처치 ${Math.min(B.kills, B.target)} / ${B.target}`; }
+  $('#hProg').style.width = (clamp(prog, 0, 1) * 100) + '%'; $('#hProgTxt').textContent = txt;
+  const bb = $('#bossBar');
+  if (B.boss && !B.boss.dead) { bb.classList.remove('hidden'); $('#bossName').textContent = B.raid ? `${B.boss.name} · 누적 피해 ${fmt(B.raidDmg)}` : `${B.boss.name}  ${fmt(Math.max(0, B.boss.hp))}`; $('#bossHp').style.width = B.raid ? '100%' : (Math.max(0, B.boss.hp) / B.boss.maxHp * 100) + '%'; }
+  else bb.classList.add('hidden');
+  document.querySelectorAll('#skills .skb').forEach(b => { const i = +b.dataset.i, f = B.cdMax[i] ? B.cds[i] / B.cdMax[i] : 0; b.querySelector('.cd').style.background = f > 0 ? `conic-gradient(rgba(0,0,0,.72) ${f * 360}deg, rgba(0,0,0,.15) 0)` : 'transparent'; b.querySelector('.ct').textContent = B.cds[i] > 0 ? Math.ceil(B.cds[i]) : ''; b.querySelector('.nm').style.opacity = B.cds[i] > 0 ? .35 : 1; });
+  const hint = $('#hint');
+  if (B.tut && B.tutStep < 4 && !B.ended) { hint.classList.remove('hidden'); hint.innerHTML = TUT_TXT[B.tutStep]; } else hint.classList.add('hidden');
+}
+
+/* ---------- render ---------- */
+function drawPlayer(c, x, y, tech, face, t, o) {
+  o = o || {}; const T = TECH[tech], s = (o.size || 16) * (o.avatar ? 1.45 : 1);
+  c.save(); c.translate(x, y); if (o.inv) c.globalAlpha = 0.6;
+  c.globalCompositeOperation = 'lighter'; const g = c.createRadialGradient(0, 0, 0, 0, 0, s * 3.2); g.addColorStop(0, `rgba(${T.glow},${o.avatar ? 0.55 : 0.32})`); g.addColorStop(1, `rgba(${T.glow},0)`); c.fillStyle = g; c.beginPath(); c.arc(0, 0, s * 3.2, 0, TAU); c.fill(); c.globalCompositeOperation = 'source-over';
+  c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(0, s * 0.9, s * 0.95, s * 0.32, 0, 0, TAU); c.fill();
+  if (tech === 'beast') { c.fillStyle = o.avatar ? '#7a4f2a' : '#3a2c22'; c.strokeStyle = T.color; c.lineWidth = 2; for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * s * 0.3, -s * 0.75); c.lineTo(sd * s * 0.85, -s * 1.4); c.lineTo(sd * s * 0.9, -s * 0.4); c.closePath(); c.fill(); c.stroke(); } }
+  if (tech === 'fire') { const fl = Math.sin(t * 22) * 3; c.fillStyle = '#ff7a3d'; c.beginPath(); c.moveTo(-s * 0.45, -s * 0.7); c.quadraticCurveTo(0, -s * 2.0 - fl, s * 0.45, -s * 0.7); c.fill(); c.fillStyle = '#ffd27a'; c.beginPath(); c.moveTo(-s * 0.22, -s * 0.8); c.quadraticCurveTo(0, -s * 1.5 - fl, s * 0.22, -s * 0.8); c.fill(); }
+  c.fillStyle = o.hurt ? '#6a2a2a' : '#18202c'; c.strokeStyle = T.color; c.lineWidth = 2.5; c.beginPath(); c.arc(0, 0, s, 0, TAU); c.fill(); c.stroke();
+  if (tech === 'earth') { c.fillStyle = '#5e6f48'; c.strokeStyle = '#a5c978'; c.lineWidth = 1.5; const px = Math.cos(face + Math.PI / 2) * s * 0.95, py = Math.sin(face + Math.PI / 2) * s * 0.95; for (const sd of [-1, 1]) { c.save(); c.translate(px * sd, py * sd); c.rotate(face + 0.8); c.fillRect(-s * 0.32, -s * 0.32, s * 0.64, s * 0.64); c.strokeRect(-s * 0.32, -s * 0.32, s * 0.64, s * 0.64); c.restore(); } }
+  const fx = Math.cos(face) * s * 0.28, fy = Math.sin(face) * s * 0.28;
+  c.fillStyle = '#0a0e14'; c.beginPath(); c.arc(fx, fy, s * 0.6, 0, TAU); c.fill();
+  c.fillStyle = T.color; c.shadowColor = T.color; c.shadowBlur = 6;
+  const ex = Math.cos(face + Math.PI / 2) * s * 0.22, ey = Math.sin(face + Math.PI / 2) * s * 0.22, cx2 = fx + Math.cos(face) * s * 0.18, cy2 = fy + Math.sin(face) * s * 0.18;
+  c.beginPath(); c.arc(cx2 + ex, cy2 + ey, s * 0.11, 0, TAU); c.fill(); c.beginPath(); c.arc(cx2 - ex, cy2 - ey, s * 0.11, 0, TAU); c.fill(); c.shadowBlur = 0;
+  if (tech === 'spirit') { for (let k = 0; k < 2; k++) { const a = t * 2.6 + k * Math.PI; c.fillStyle = '#cfe8ff'; c.shadowColor = T.color; c.shadowBlur = 10; c.beginPath(); c.arc(Math.cos(a) * (s + 10), Math.sin(a) * (s + 10) * 0.6 - 3, 3.5, 0, TAU); c.fill(); c.shadowBlur = 0; } }
+  if (o.shield) { c.strokeStyle = 'rgba(165,201,120,.9)'; c.fillStyle = '#7d8f5a'; c.lineWidth = 2; for (let k = 0; k < 10; k++) { const a = t * 1.5 + k / 10 * TAU, r = s + 12; c.save(); c.translate(Math.cos(a) * r, Math.sin(a) * r); c.rotate(a); c.beginPath(); c.moveTo(-4, -5); c.lineTo(9, 0); c.lineTo(-4, 5); c.closePath(); c.fill(); c.stroke(); c.restore(); } }
+  c.restore();
+}
+function drawEnemy(c, e, th, t) {
+  const p = B.p, a = Math.atan2(p.y - e.y, p.x - e.x), col = th.mob[e.type], r = e.r;
+  c.save(); c.translate(e.x, e.y);
+  c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(0, r * 0.85, r, r * 0.33, 0, 0, TAU); c.fill();
+  if (e.kind !== 'mob') { c.globalCompositeOperation = 'lighter'; const g = c.createRadialGradient(0, 0, r * 0.6, 0, 0, r * 2.2); g.addColorStop(0, e.kind === 'boss' ? 'rgba(255,60,60,.35)' : 'rgba(255,190,80,.3)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * 2.2, 0, TAU); c.fill(); c.globalCompositeOperation = 'source-over'; }
+  c.fillStyle = e.flash > 0 ? '#ffffff' : col; c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 2;
+  c.beginPath();
+  if (e.kind !== 'mob' || e.type === 'tank') { for (let k = 0; k < 6; k++) { const aa = k / 6 * TAU + e.anim * 0.3; c.lineTo(Math.cos(aa) * r, Math.sin(aa) * r); } c.closePath(); }
+  else if (e.type === 'runner') { c.moveTo(Math.cos(a) * r * 1.3, Math.sin(a) * r * 1.3); c.lineTo(Math.cos(a + 2.4) * r, Math.sin(a + 2.4) * r); c.lineTo(Math.cos(a - 2.4) * r, Math.sin(a - 2.4) * r); c.closePath(); }
+  else if (e.type === 'shooter') { c.arc(0, 2, r * 0.8, 0, TAU); }
+  else { const sq = 1 + Math.sin(e.anim * 6) * 0.08; c.ellipse(0, 0, r * sq, r / sq, 0, 0, TAU); }
+  c.fill(); c.stroke();
+  if (e.type === 'shooter' && e.kind === 'mob') { c.fillStyle = e.flash > 0 ? '#fff' : th.proj; c.beginPath(); c.arc(0, -r * 0.35, r * 1.05, Math.PI, 0); c.fill(); }
+  if (e.kind !== 'mob') { c.fillStyle = e.kind === 'boss' ? '#ff5a5a' : '#ffc46b'; for (let k = -1; k <= 1; k++) { c.beginPath(); c.moveTo(k * r * 0.4 - 6, -r * 0.85); c.lineTo(k * r * 0.4, -r * 1.35 - (k === 0 ? 8 : 0)); c.lineTo(k * r * 0.4 + 6, -r * 0.85); c.fill(); } }
+  c.fillStyle = e.kind === 'boss' ? '#ff4d4d' : th.eye; const er = Math.max(2, r * 0.14), ex = Math.cos(a + Math.PI / 2) * r * 0.3, ey = Math.sin(a + Math.PI / 2) * r * 0.3, fx = Math.cos(a) * r * 0.4, fy = Math.sin(a) * r * 0.4;
+  c.beginPath(); c.arc(fx + ex, fy + ey, er, 0, TAU); c.fill(); c.beginPath(); c.arc(fx - ex, fy - ey, er, 0, TAU); c.fill();
+  if (e.burn > 0) { c.globalAlpha = 0.35; c.fillStyle = '#ff6a1f'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); c.globalAlpha = 1; }
+  if (e.stun > 0) { c.fillStyle = '#ffe36b'; for (let k = 0; k < 3; k++) { const aa = t * 5 + k / 3 * TAU; c.beginPath(); c.arc(Math.cos(aa) * r * 0.7, -r - 6 + Math.sin(aa) * 3, 2.5, 0, TAU); c.fill(); } }
+  if (e.kind === 'mob' && e.hp < e.maxHp) { c.fillStyle = 'rgba(0,0,0,.6)'; c.fillRect(-r, -r - 9, r * 2, 4); c.fillStyle = '#ff6b6b'; c.fillRect(-r, -r - 9, r * 2 * Math.max(0, e.hp / e.maxHp), 4); }
+  c.restore();
+}
+function drawDecor(c, th, x0, y0, x1, y1, t) {
+  const cs = 140, i0 = Math.floor(x0 / cs) - 1, i1 = Math.floor(x1 / cs) + 1, j0 = Math.floor(y0 / cs) - 1, j1 = Math.floor(y1 / cs) + 1;
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+    const h = hash(i, j), h2 = hash(i + 71, j - 13), px = i * cs + h2 * cs, py = j * cs + hash(i - 5, j + 9) * cs;
+    if (h > 0.85) { c.fillStyle = th.blot; c.beginPath(); c.arc(px, py, 70 + h2 * 60, 0, TAU); c.fill(); }
+    if (B.theme === 'forest') {
+      if (h < 0.18) { c.fillStyle = th.decor[2]; c.beginPath(); c.arc(px + 6, py + 8, 24 + h2 * 26, 0, TAU); c.fill(); c.fillStyle = th.decor[0]; c.beginPath(); c.arc(px, py, 22 + h2 * 24, 0, TAU); c.fill(); c.fillStyle = th.decor[1]; c.beginPath(); c.arc(px - 6, py - 6, 12 + h2 * 12, 0, TAU); c.fill(); }
+      else if (h < 0.5) { c.strokeStyle = th.decor[1]; c.lineWidth = 2; c.beginPath(); for (let k = 0; k < 3; k++) { c.moveTo(px + k * 5, py); c.lineTo(px + k * 5 - 3 + k * 2, py - 9 - k * 2); } c.stroke(); }
+      else if (h < 0.55) { c.fillStyle = `rgba(200,255,150,${0.25 + 0.25 * Math.sin(t * 2 + h2 * 9)})`; c.beginPath(); c.arc(px, py, 2.2, 0, TAU); c.fill(); }
+    } else if (B.theme === 'ruins') {
+      if (h < 0.14) { c.fillStyle = th.decor[2]; c.fillRect(px - 18, py - 10, 40, 34); c.fillStyle = th.decor[1]; c.fillRect(px - 20, py - 20, 40, 34); c.fillStyle = th.decor[0]; c.fillRect(px - 20, py - 20, 40, 6); }
+      else if (h < 0.4) { c.strokeStyle = th.decor[1]; c.lineWidth = 1.5; c.beginPath(); c.moveTo(px, py); c.lineTo(px + 18, py + 6); c.lineTo(px + 26, py - 4); c.moveTo(px + 18, py + 6); c.lineTo(px + 20, py + 18); c.stroke(); }
+      else if (h < 0.5) { c.fillStyle = th.decor[0]; c.fillRect(px, py, 7, 6); c.fillRect(px + 10, py + 4, 5, 4); }
+    } else {
+      if (h < 0.15) { c.fillStyle = th.decor[1]; c.strokeStyle = 'rgba(190,120,255,.35)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(px, py - 26); c.lineTo(px + 11, py); c.lineTo(px, py + 10); c.lineTo(px - 11, py); c.closePath(); c.fill(); c.stroke(); }
+      else if (h < 0.45) { c.fillStyle = `rgba(255,124,224,${0.15 + 0.2 * Math.sin(t * 1.5 + h2 * 12)})`; c.beginPath(); c.arc(px, py, 2.5, 0, TAU); c.fill(); }
+      else if (h < 0.55) { c.strokeStyle = th.decor[0]; c.lineWidth = 3; c.beginPath(); c.arc(px, py, 14 + h2 * 10, 0, Math.PI * 1.3); c.stroke(); }
+    }
+  }
+}
+function render(now) {
+  const c = ctx, th = THEMES[B.theme], sc = B.scale, t = now / 1000;
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  c.fillStyle = th.bg; c.fillRect(0, 0, W, H);
+  const sx = (Math.random() - 0.5) * B.shake, sy = (Math.random() - 0.5) * B.shake;
+  c.save(); c.translate(W / 2 + sx, H / 2 + sy); c.scale(sc, sc); c.translate(-B.cam.x, -B.cam.y);
+  const hw = W / 2 / sc, hh = H / 2 / sc;
+  drawDecor(c, th, B.cam.x - hw, B.cam.y - hh, B.cam.x + hw, B.cam.y + hh, t);
+  c.globalCompositeOperation = 'lighter';
+  for (const z of B.zones) { const a = Math.min(1, z.life) * (0.85 + 0.15 * Math.sin(t * 20)); const g = c.createRadialGradient(z.x, z.y, 0, z.x, z.y, z.r); g.addColorStop(0, `rgba(255,150,60,${0.45 * a})`); g.addColorStop(0.7, `rgba(255,80,20,${0.25 * a})`); g.addColorStop(1, 'rgba(255,60,0,0)'); c.fillStyle = g; c.beginPath(); c.arc(z.x, z.y, z.r, 0, TAU); c.fill(); }
+  c.globalCompositeOperation = 'source-over';
+  for (const tl of B.teles) {
+    const k = tl.t / tl.delay;
+    if (tl.kind === 'circle') { c.fillStyle = 'rgba(255,50,50,.13)'; c.strokeStyle = 'rgba(255,90,90,.75)'; c.lineWidth = 2; c.beginPath(); c.arc(tl.x, tl.y, tl.r, 0, TAU); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,60,60,.3)'; c.beginPath(); c.arc(tl.x, tl.y, tl.r * k, 0, TAU); c.fill(); }
+    else { c.save(); c.translate(tl.x, tl.y); c.rotate(tl.ang); c.fillStyle = 'rgba(255,50,50,.13)'; c.fillRect(0, -tl.w, tl.len, tl.w * 2); c.fillStyle = 'rgba(255,60,60,.3)'; c.fillRect(0, -tl.w, tl.len * k, tl.w * 2); c.strokeStyle = 'rgba(255,90,90,.7)'; c.lineWidth = 2; c.strokeRect(0, -tl.w, tl.len, tl.w * 2); c.restore(); }
+  }
+  for (const f of B.fx) if (f.type === 'mark') { const k = 1 - f.life / f.max; c.strokeStyle = 'rgba(255,140,60,.8)'; c.lineWidth = 2; c.setLineDash([8, 6]); c.beginPath(); c.arc(f.x, f.y, f.r, 0, TAU); c.stroke(); c.setLineDash([]); c.fillStyle = `rgba(255,120,40,${0.1 + k * 0.25})`; c.beginPath(); c.arc(f.x, f.y, f.r * k, 0, TAU); c.fill(); }
+  const sorted = B.enemies.slice().sort((a, b) => a.y - b.y);
+  for (const e of sorted) drawEnemy(c, e, th, t);
+  const p = B.p;
+  if (!(B.ended && !B.win)) drawPlayer(c, p.x, p.y, B.tech, p.face, t, { avatar: p.avatar > 0, hurt: p.hurt > 0, shield: p.shield > 0, inv: p.inv > 0 && !p.dash });
+  if (p.storm > 0) { c.fillStyle = 'rgba(40,50,70,.85)'; for (let k = 0; k < 4; k++) { c.beginPath(); c.arc(p.x - 30 + k * 20, p.y - 110 + Math.sin(t * 3 + k) * 3, 18, 0, TAU); c.fill(); } if (Math.random() < 0.3) { c.strokeStyle = '#d8eeff'; c.lineWidth = 2; c.beginPath(); c.moveTo(p.x + rand(-30, 30), p.y - 100); c.lineTo(p.x + rand(-30, 30), p.y - 85); c.stroke(); } }
+  c.globalCompositeOperation = 'lighter';
+  for (const b of B.eproj) { c.fillStyle = th.proj; c.globalAlpha = 0.35; c.beginPath(); c.arc(b.x, b.y, b.r * 2, 0, TAU); c.fill(); c.globalAlpha = 1; c.beginPath(); c.arc(b.x, b.y, b.r * 0.7, 0, TAU); c.fill(); }
+  for (const b of B.pproj) { const g = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, 22); g.addColorStop(0, 'rgba(255,240,180,1)'); g.addColorStop(0.4, 'rgba(255,140,50,.8)'); g.addColorStop(1, 'rgba(255,60,0,0)'); c.fillStyle = g; c.beginPath(); c.arc(b.x, b.y, 22, 0, TAU); c.fill(); }
+  for (const f of B.fx) {
+    const k = 1 - f.life / f.max, a = f.life / f.max;
+    if (f.type === 'ring') { c.strokeStyle = f.color; c.globalAlpha = a; c.lineWidth = f.w || 4; c.beginPath(); c.arc(f.x, f.y, f.r0 + (f.r1 - f.r0) * k, 0, TAU); c.stroke(); c.globalAlpha = 1; }
+    else if (f.type === 'arc') { c.strokeStyle = f.color; c.globalAlpha = a; c.lineCap = 'round'; for (let s = 0; s < 3; s++) { c.lineWidth = 4 - s; c.beginPath(); c.arc(f.x, f.y, f.r * (0.6 + s * 0.17), f.ang - 0.9 + k * 0.3, f.ang + 0.9 + k * 0.3); c.stroke(); } c.globalAlpha = 1; }
+    else if (f.type === 'bolt') { c.strokeStyle = f.color; c.globalAlpha = a; c.lineWidth = f.w || 2.5; c.shadowColor = f.color; c.shadowBlur = 10; c.beginPath(); f.pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.stroke(); c.shadowBlur = 0; c.globalAlpha = 1; }
+    else if (f.type === 'boom') { const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r); g.addColorStop(0, `rgba(${f.color},${0.7 * a})`); g.addColorStop(1, `rgba(${f.color},0)`); c.fillStyle = g; c.beginPath(); c.arc(f.x, f.y, f.r * (0.6 + 0.4 * k), 0, TAU); c.fill(); }
+  }
+  for (const q of B.parts) { c.globalAlpha = q.life / q.max; c.fillStyle = q.color; c.beginPath(); c.arc(q.x, q.y, q.size * (0.5 + 0.5 * q.life / q.max), 0, TAU); c.fill(); }
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  for (const f of B.fx) if (f.type === 'spikes') { const k = Math.min(1, (1 - f.life / f.max) * 3), a = Math.min(1, f.life / f.max * 2); c.globalAlpha = a; c.fillStyle = f.color; c.strokeStyle = '#2a3520'; c.lineWidth = 1.5; for (let i = 0; i < f.n; i++) { const aa = i / f.n * TAU + f.x * 0.01, rr = f.r * (0.4 + 0.6 * hash(i, f.x | 0)), x = f.x + Math.cos(aa) * rr * (f.n > 8 ? 1 : 0.5), y = f.y + Math.sin(aa) * rr * (f.n > 8 ? 1 : 0.5), hgt = 22 * k; c.beginPath(); c.moveTo(x - 7, y); c.lineTo(x, y - hgt); c.lineTo(x + 7, y); c.closePath(); c.fill(); c.stroke(); } c.globalAlpha = 1; }
+  c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.7)';
+  for (const tx of B.texts) { c.globalAlpha = Math.min(1, tx.life * 2); c.font = `800 ${tx.size}px Pretendard, "Malgun Gothic", sans-serif`; c.strokeText(tx.txt, tx.x, tx.y); c.fillStyle = tx.color; c.fillText(tx.txt, tx.x, tx.y); }
+  c.globalAlpha = 1;
+  c.restore();
+  const vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.65)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
+  if (B.p.hp < B.p.maxHp * 0.3 && !B.ended) { c.fillStyle = `rgba(255,0,0,${0.08 + 0.06 * Math.sin(t * 6)})`; c.fillRect(0, 0, W, H); }
+  if (B.flash) { c.fillStyle = `rgba(220,240,255,${B.flash * 2})`; c.fillRect(0, 0, W, H); }
+  if (joy.active) { c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 2; c.beginPath(); c.arc(joy.bx, joy.by, 60, 0, TAU); c.stroke(); const dx = joy.x - joy.bx, dy = joy.y - joy.by, d = Math.min(60, Math.hypot(dx, dy)), a = Math.atan2(dy, dx); c.fillStyle = 'rgba(255,255,255,.3)'; c.beginPath(); c.arc(joy.bx + Math.cos(a) * d, joy.by + Math.sin(a) * d, 24, 0, TAU); c.fill(); }
+  if (B.banner) { const a = Math.min(1, B.banner.t * 2, (2.4 - B.banner.t) * 4); c.globalAlpha = a; c.textAlign = 'center'; c.font = `900 ${Math.min(30, W / 16)}px Pretendard, "Malgun Gothic", sans-serif`; c.lineWidth = 5; c.strokeStyle = 'rgba(0,0,0,.8)'; c.strokeText(B.banner.txt, W / 2, H * 0.22); c.fillStyle = '#fff'; c.fillText(B.banner.txt, W / 2, H * 0.22); c.globalAlpha = 1; }
+}
+
+/* =========================================================
+   LOBBY UI
+   ========================================================= */
+const UI = { tab: 'home', treeTech: null, node: 'core' };
+let ACT = {};
+function toast(msg) { const d = document.createElement('div'); d.innerHTML = msg; $('#toast').appendChild(d); setTimeout(() => d.remove(), 2600); }
+function showModal(html, o) { o = o || {}; $('#modal').innerHTML = html; $('#mwrap').classList.remove('hidden'); $('#mwrap').dataset.closable = o.closable === false ? '0' : '1'; }
+function closeModal() { $('#mwrap').classList.add('hidden'); $('#modal').innerHTML = ''; }
+$('#mwrap').addEventListener('click', e => { if (e.target.id === 'mwrap' && $('#mwrap').dataset.closable === '1') closeModal(); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b) return; const f = ACT[b.dataset.act]; if (f) f(b.dataset, b); });
+document.addEventListener('pointerdown', e => { const b = e.target.closest('.skb'); if (b) { e.preventDefault(); useSkill(+b.dataset.i); } });
+
+function cur(cls, v) { return `<span><i class="ic ${cls}"></i><b>${fmt(v)}</b></span>`; }
+function renderTop() {
+  const req = expReq(S.lvl);
+  $('#top').innerHTML = `<div class="prof"><div class="lvb">Lv.${S.lvl}</div><div class="expbar"><i style="width:${S.exp / req * 100}%"></i></div><div class="pw">전투력 <b>${fmt(curPower())}</b></div></div>
+  <div class="cur">${cur('gold', S.gold)}${cur('stone', S.stone)}${cur('sp', S.sp)}${cur('dia', S.dia)}</div>`;
+}
+function hasMissionDot() { if (S.attend.last !== ymd()) return true; return DAILY.some(q => (S.daily[q.id] || 0) >= q.goal && !S.daily.claimed[q.id]); }
+function renderNav() {
+  const tabs = [['home', '사냥'], ['tree', '스킬트리'], ['equip', '장비'], ['upg', '강화'], ['mission', '미션'], ['shop', '상점']];
+  $('#nav').innerHTML = tabs.map(([id, n]) => `<button class="${UI.tab === id ? 'on' : ''} ${S.tut === 1 && id !== 'tree' ? 'dis' : ''}" data-act="tab" data-tab="${id}">${n}${id === 'mission' && hasMissionDot() ? '<i class="dot"></i>' : ''}${id === 'tree' && S.sp > 0 ? '<i class="dot"></i>' : ''}</button>`).join('');
+}
+function renderLobby() {
+  refreshPeriodic();
+  document.documentElement.style.setProperty('--tc', TECH[S.tech].color);
+  renderTop(); renderNav();
+  const el = $('#content');
+  const fn = { home: renderHome, tree: renderTree, equip: renderEquip, upg: renderUpg, mission: renderMission, shop: renderShop }[UI.tab];
+  el.innerHTML = fn();
+  if (UI.tab === 'home') drawPreview(performance.now() / 1000);
+}
+function idleBoxHtml() {
+  const p = idlePending();
+  if (S.cleared < 0) return `<div class="idle"><div class="chest"></div><div class="info"><b>방치 보상</b><br><span class="muted">스테이지를 하나 클리어하면 자동 사냥 보상이 쌓이기 시작해요</span></div></div>`;
+  return `<div class="idle"><div class="chest"></div><div class="info"><b>방치 보상</b> <span class="muted">${hm(p.h)} / ${p.cap}시간 · 기준 ${gToCS(S.cleared).ch}-${gToCS(S.cleared).st}</span><br>
+    <i class="ic gold"></i> ${fmt(p.gold)} &nbsp; <i class="ic stone"></i> ${fmt(p.stone)} &nbsp; EXP ${fmt(p.exp)} ${p.over > 0 ? `<br><span style="color:#ffcf7a">상한 초과 ${hm(p.over)} 대기 중</span>` : ''}
+    <div class="idlebar"><i style="width:${p.h / p.cap * 100}%"></i></div></div><button class="btn pri sm" data-act="idle">수령</button></div>`;
+}
+function renderHome() {
+  const T = TECH[S.tech], ch = S.sel.ch, maxG = S.cleared + 1;
+  let h = '';
+  if (S.tut === 2) h += `<div class="coach">목표: 1-10 보스를 처치하고 첫 영웅 장비를 얻으세요</div>`;
+  h += `<div class="chips">${TECH_ORDER.map(id => { const t = TECH[id], un = techUnlocked(id); return `<button class="chip ${S.tech === id ? 'on' : ''} ${un ? '' : 'lock'}" style="--c:${t.color}" data-act="tech" data-id="${id}"><i></i>${t.short}${un ? `<small>${t.palette}</small>` : `<small>챕터 ${t.unlockCh} 클리어</small>`}</button>`; }).join('')}</div>`;
+  h += `<div class="card"><div class="hero"><canvas id="prev" width="220" height="220"></canvas><div style="flex:1;min-width:0"><h2 style="color:${T.color}">${T.name}</h2><div class="muted">${T.role} · ${T.desc}</div>
+    <div class="sk">기본: ${T.attack.name} <span class="muted">(자동)</span></div>${T.skills.map((s, i) => `<div class="sk ${skillUnlocked(i) ? '' : 'lock'}">${['스킬', '신규 액티브', '궁극기'][i]}: ${s.name} ${skillUnlocked(i) ? '' : '<span>(스킬트리 해금)</span>'}</div>`).join('')}</div></div></div>`;
+  h += `<div class="card" id="idleBox">${idleBoxHtml()}</div>`;
+  h += `<div class="card"><div class="chnav"><button data-act="ch" data-d="-1">‹</button><div><b>챕터 ${ch} · ${CH_NAMES[ch - 1]}</b><small>${THEMES[themeOf(ch)].name}</small></div><button data-act="ch" data-d="1">›</button></div><div class="stages">`;
+  for (let st = 1; st <= 10; st++) {
+    const g = stageG(ch, st), cls = g <= S.cleared ? 'clear' : g === maxG ? 'cur' : g > maxG ? 'lock' : '';
+    const sel = S.sel.ch === ch && S.sel.st === st ? 'sel' : '';
+    h += `<button class="stg ${cls} ${sel} ${st === 10 ? 'boss' : st === 5 ? 'mid' : ''}" data-act="stage" data-ch="${ch}" data-st="${st}">${ch}-${st}<small>${st === 10 ? '보스' : st === 5 ? '중간 보스' : ''}</small></button>`;
+  }
+  const sg = stageG(S.sel.ch, S.sel.st), stt = stageType(S.sel.st), rp = recPower(sg), pw = curPower();
+  h += `</div><div class="row" style="justify-content:space-between;margin-bottom:8px"><div class="muted">선택: <b style="color:#fff">${S.sel.ch}-${S.sel.st}</b> ${stt === 'boss' ? `· 보스 ${BOSS_NAMES[S.sel.ch - 1]} (영웅 장비 확정)` : stt === 'mid' ? '· 중간 보스 (희귀 이상 확정)' : `· 처치 목표 ${20 + S.sel.st * 3}`}</div><div class="muted">권장 <b style="color:${pw >= rp ? 'var(--sp)' : 'var(--red)'}">${fmt(rp)}</b></div></div>
+  <div class="row"><button class="btn pri big" data-act="start">사냥 시작</button>${sg <= S.cleared ? `<button class="btn" style="padding:14px 10px;white-space:nowrap" data-act="sweep">소탕<br><small>다이아 ${CONFIG.sweepDia}</small></button>` : ''}</div>
+  <div class="toggles"><button class="tg ${S.settings.auto ? 'on' : ''}" data-act="toggle" data-k="auto">자동 전투 ${S.settings.auto ? 'ON' : 'OFF'}</button><button class="tg ${S.settings.autoNext ? 'on' : ''}" data-act="toggle" data-k="autoNext">자동 진행 ${S.settings.autoNext ? 'ON' : 'OFF'}</button><button class="tg ${S.settings.repeat ? 'on' : ''}" data-act="toggle" data-k="repeat">반복 사냥 ${S.settings.repeat ? 'ON' : 'OFF'}</button></div>
+  <div class="muted" style="margin-top:8px">자동 진행: 클리어 후 다음 스테이지로 · 반복 사냥: 같은 스테이지 파밍</div></div>`;
+  h += `<div class="muted" style="text-align:center;padding:4px 0 10px">PC: WASD 이동 · 1/2/3 스킬 · P 일시정지 &nbsp;|&nbsp; 모바일: 드래그 이동</div>`;
+  return h;
+}
+function drawPreview(t) {
+  const c2 = $('#prev'); if (!c2) return; const x = c2.getContext('2d');
+  x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 220, 220); x.setTransform(2, 0, 0, 2, 0, 0);
+  drawPlayer(x, 55, 60 + Math.sin(t * 2) * 2, S.tech, Math.PI / 2, t, { size: 22 });
+}
+/* --- tree --- */
+function nodeCost(n, lvl) { return { sp: n.type === 'P' ? 1 : n.type === 'A' ? 3 : 5, gold: Math.round(40 * n.tier * Math.pow(1.6, lvl)), stone: n.stone || (n.tier >= 2 ? 2 * (lvl + 1) : 0) }; }
+const reqMet = (tech, n) => n.req.every(r => (S.trees[tech][r] || 0) > 0);
+function renderTree() {
+  const tech = UI.treeTech || S.tech, T = TECH[tech], nodes = TREES[tech], lv = S.trees[tech], un = techUnlocked(tech);
+  let h = '';
+  if (S.tut === 1) h += `<div class="coach">첫 스킬포인트를 얻었어요! 깜빡이는 <b>코어 노드</b>를 눌러 투자해보세요</div>`;
+  h += `<div class="ttabs">${TECH_ORDER.map(id => `<button class="${tech === id ? 'on' : ''}" style="--c:${TECH[id].color}" data-act="ttech" data-id="${id}">${TECH[id].short}${techUnlocked(id) ? '' : ' (잠김)'}</button>`).join('')}</div>`;
+  let svg = `<svg class="tree" viewBox="0 0 400 440"><defs><filter id="gl"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  for (const n of nodes) for (const r of n.req) { const a = nodes.find(x => x.id === r), on = (lv[r] || 0) > 0 && (lv[n.id] || 0) > 0, av = (lv[r] || 0) > 0; svg += `<line x1="${a.x}" y1="${a.y}" x2="${n.x}" y2="${n.y}" stroke="${on ? T.color : av ? 'rgba(255,255,255,.35)' : 'rgba(255,255,255,.1)'}" stroke-width="${on ? 4 : 2.5}" ${av ? '' : 'stroke-dasharray="5 5"'} ${on ? 'filter="url(#gl)"' : ''}/>`; }
+  for (const n of nodes) {
+    const l = lv[n.id] || 0, avail = reqMet(tech, n), R = n.type === 'U' ? 30 : n.type === 'A' ? 27 : 23, sel = UI.node === n.id;
+    const stroke = l > 0 ? T.color : avail ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.18)';
+    const fill = l > 0 ? (l >= n.max ? T.color + '66' : T.color + '33') : '#111a16';
+    svg += `<g class="nd ${S.tut === 1 && n.id === 'core' ? 'pulse' : ''}" data-act="node" data-id="${n.id}">${sel ? `<circle cx="${n.x}" cy="${n.y}" r="${R + 6}" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 3"/>` : ''}
+      <circle cx="${n.x}" cy="${n.y}" r="${R}" fill="${fill}" stroke="${stroke}" stroke-width="${n.type === 'P' ? 2.5 : 3.5}" ${l > 0 ? 'filter="url(#gl)"' : ''}/>
+      <text x="${n.x}" y="${n.y - 3}" text-anchor="middle" font-size="10" font-weight="800" fill="${avail || l ? '#fff' : '#667'}">${n.type === 'P' ? '패시브' : n.type === 'A' ? '액티브' : '궁극기'}</text>
+      <text x="${n.x}" y="${n.y + 11}" text-anchor="middle" font-size="11" font-weight="800" fill="${l ? T.color : '#9aa'}">${l}/${n.max}</text>
+      <text x="${n.x}" y="${n.y + R + 14}" text-anchor="middle" font-size="11" font-weight="700" fill="${avail || l ? '#dfe' : '#556'}">${n.name}</text></g>`;
+  }
+  svg += `</svg>`;
+  h += `<div class="card treewrap" style="--c:${T.color};padding:6px">${svg}</div>`;
+  const n = nodes.find(x => x.id === UI.node) || nodes[0], l = lv[n.id] || 0, c = nodeCost(n, l), maxed = l >= n.max, avail = reqMet(tech, n);
+  const vNow = n.stat ? n.desc.replace('{v}', n.per * l) : '', vNext = n.stat ? n.desc.replace('{v}', n.per * (l + 1)) : '';
+  const skill = n.skill != null ? T.skills[n.skill] : null;
+  let why = !un ? `${T.name}는 챕터 ${T.unlockCh} 클리어 시 해금` : maxed ? '최대 레벨' : !avail ? '이전 노드를 먼저 해금하세요' : S.sp < c.sp ? '스킬포인트 부족' : S.gold < c.gold ? '골드 부족' : S.stone < c.stone ? '스톤 부족' : '';
+  h += `<div class="card ndinfo"><h4>${n.name} <span class="typ">${n.type === 'P' ? '패시브 강화' : n.type === 'A' ? '신규 액티브' : '궁극기'}</span><span class="muted" style="margin-left:auto">Lv ${l}/${n.max}</span></h4>
+    <div class="muted" style="margin-top:6px">${skill ? `${skill.desc}<br>쿨타임 ${skill.cd}초` : `현재: ${l ? vNow : '-'}${maxed ? '' : `<br>다음: <b style="color:#fff">${vNext}</b>`}`}</div>
+    ${maxed ? '' : `<div class="cost"><span class="${S.sp < c.sp ? 'no' : ''}"><i class="ic sp"></i>${c.sp}</span><span class="${S.gold < c.gold ? 'no' : ''}"><i class="ic gold"></i>${fmt(c.gold)}</span>${c.stone ? `<span class="${S.stone < c.stone ? 'no' : ''}"><i class="ic stone"></i>${c.stone}</span>` : ''}</div>`}
+    <div class="row"><button class="btn pri" style="flex:1" data-act="invest" ${why ? 'disabled' : ''}>${why || '투자하기'}</button></div></div>`;
+  h += `<div class="card"><h3>스킬트리 규칙<small>기획서 7p</small></h3><div class="muted">레벨업마다 스킬포인트 ${CONFIG.spPerLevel} · 챕터 최초 클리어 시 +${CONFIG.spPerChapterClear}<br>연결된 이전 노드를 해금해야 다음 노드 개방 · 테크별 트리 개별 성장<br>상위 노드(2단계 이상)는 스톤 필요</div>
+    <div class="row" style="margin-top:10px"><button class="btn" data-act="respec" ${S.tut === 1 ? 'disabled' : ''}>리스펙 (${S.freeRespec ? '무료 1회' : '다이아 ' + CONFIG.respecDia})</button><span class="muted">스킬포인트만 환급, 골드·스톤은 환급되지 않아요</span></div></div>`;
+  return h;
+}
+/* --- equip --- */
+function itemCard(it, act) {
+  if (!it) return `<div class="it empty">비어 있음</div>`;
+  const G = GRADES[it.grade], eq = SLOTS.some(s => S.equip[s] === it.uid);
+  return `<button class="it" style="--gc:${G.color}" data-act="${act || 'item'}" data-uid="${it.uid}">${eq ? '<span class="eq">E</span>' : ''}${it.enh ? `<span class="en">+${it.enh}</span>` : ''}<span class="sl">${SLOT_LABEL[it.slot]} · ${G.name}</span><span class="nm">${itemName(it)}</span><span class="od">${it.opts.map(o => `<i style="background:${CONFIG.optTiers[o.tier].color}"></i>`).join('')}</span></button>`;
+}
+function renderEquip() {
+  const st = computeStats(); let h = `<div class="card"><h3>장착 장비<small>세트 2개: 공격력 +10% · 4개: 궁극기 쿨감 +15%</small></h3><div class="slots">`;
+  h += SLOTS.map(s => { const it = itemById(S.equip[s]); return it ? itemCard(it) : `<div class="it empty"><span class="sl">${SLOT_LABEL[s]}</span>비어 있음</div>`; }).join('');
+  const sets = Object.entries(st.setCount).filter(([, c]) => c >= 2);
+  h += `</div><div class="setb">${sets.length ? sets.map(([k, c]) => `<span class="on">${SETS[k]} 세트 ${c}개</span>: 공격력 +10%${c >= 4 ? ' · 궁극기 쿨감 +15%' : ''}`).join('<br>') : '<span class="muted">같은 세트 장비 2개 이상 장착 시 세트 효과 발동</span>'}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" style="flex:1" data-act="autoequip">자동 장착</button><button class="btn" style="flex:1" data-act="disall">일반 일괄 분해</button><button class="btn" data-act="probs">확률 정보</button></div></div>`;
+  const inv = S.inv.slice().sort((a, b) => b.grade - a.grade || b.ilvl - a.ilvl || b.enh - a.enh);
+  h += `<div class="card"><h3>가방<small>${S.inv.length} / ${CONFIG.invCap}</small></h3>${inv.length ? `<div class="inv">${inv.map(it => itemCard(it)).join('')}</div>` : '<div class="muted">스테이지를 클리어하면 장비가 드랍돼요. 5번째 스테이지(중간 보스)는 희귀 이상, 10번째(보스)는 영웅 장비가 확정이에요.</div>'}</div>`;
+  return h;
+}
+function probTables() {
+  const d = CONFIG.drop.normal;
+  return `<table class="pt"><tr><th>장비 등급</th><th>드랍률</th><th>옵션 슬롯</th><th>획득처</th></tr>
+  <tr><td style="color:${GRADES[0].color}">일반</td><td>${d.common}%</td><td>0개</td><td>기본 스테이지</td></tr>
+  <tr><td style="color:${GRADES[1].color}">희귀</td><td>${d.rare}%</td><td>1개</td><td>중간 보스 확정</td></tr>
+  <tr><td style="color:${GRADES[2].color}">영웅</td><td>${d.hero}%</td><td>2개</td><td>챕터 보스 확정</td></tr>
+  <tr><td style="color:${GRADES[3].color}">전설</td><td>${CONFIG.drop.raidLegend}%</td><td>3개</td><td>특수 보스(레이드) 한정</td></tr></table>
+  <table class="pt" style="margin-top:10px"><tr><th>옵션 등급</th><th>등장 확률</th><th>효과 배율</th></tr>${CONFIG.optTiers.map(t => `<tr><td style="color:${t.color}">${t.name}</td><td>${t.p}%</td><td>×${t.mul.toFixed(1)}</td></tr>`).join('')}</table>
+  <div class="muted" style="margin-top:6px">천장: 최상급 미획득 시 옵션 재설정 ${CONFIG.pity}회 누적마다 최상급 1개 확정</div>`;
+}
+function showItem(uid) {
+  const it = itemById(uid); if (!it) { closeModal(); return; }
+  const G = GRADES[it.grade], b = itemBase(it), eq = S.equip[it.slot] === it.uid;
+  const cand = Object.assign({}, S.equip, { [it.slot]: it.uid }), diff = powerOf(computeStats(null, cand)) - curPower();
+  const locks = it.opts.filter(o => o.lock).length, rs = CONFIG.reroll.stone + locks * CONFIG.reroll.lockStone, rd = CONFIG.reroll.dia + locks * CONFIG.reroll.lockDia;
+  const ec = 2 + it.enh * 2, eg = 100 * (it.enh + 1), rate = Math.max(40, 100 - it.enh * 5), maxE = it.enh >= G.maxEnh;
+  let h = `<h2 style="color:${G.color}">${itemName(it)}${it.enh ? ' +' + it.enh : ''}</h2><div class="sub">${G.name} · ${SLOT_LABEL[it.slot]} · ${SETS[it.set]} 세트 · 아이템 레벨 ${it.ilvl + 1}</div>`;
+  h += `<div class="rw">${b.atkFlat ? `<div><span>공격력</span>+${fmt(b.atkFlat)}</div>` : ''}${b.hpFlat ? `<div><span>체력</span>+${fmt(b.hpFlat)}</div>` : ''}${b.def ? `<div><span>방어력</span>+${fmt(b.def)}</div>` : ''}${b.critC ? `<div><span>치명타</span>+${b.critC.toFixed(1)}%</div>` : ''}<div><span>장착 시 전투력</span><b style="color:${diff >= 0 ? 'var(--sp)' : 'var(--red)'}">${eq ? '장착 중' : (diff >= 0 ? '+' : '') + fmt(diff)}</b></div></div>`;
+  if (it.opts.length) {
+    h += `<div style="font-weight:800;margin:10px 0 6px">옵션</div>` + it.opts.map((o, i) => { const T = CONFIG.optTiers[o.tier]; return `<div class="opt"><span class="g" style="color:${T.color}">${T.name}</span>${OPTS[o.key].name} +${optVal(o).toFixed(1)}%<button class="lk ${o.lock ? 'on' : ''}" data-act="lock" data-uid="${uid}" data-i="${i}">${o.lock ? '고정됨' : '고정'}</button></div>`; }).join('');
+    h += `<div class="row" style="margin-top:6px"><button class="btn" style="flex:1" data-act="reroll" data-uid="${uid}" data-c="stone"><i class="ic stone"></i> 스톤 ${rs}로 재설정</button><button class="btn dia" style="flex:1" data-act="reroll" data-uid="${uid}" data-c="dia">다이아 ${rd}로 재설정</button></div>
+    <div class="muted" style="margin-top:6px">최상급 천장 ${S.pity} / ${CONFIG.pity} · 고정한 옵션은 유지되고 고정 1개당 비용 추가</div>`;
+  } else h += `<div class="muted" style="margin:8px 0">일반 등급은 옵션 슬롯이 없어요</div>`;
+  h += `<div style="font-weight:800;margin:12px 0 6px">강화 <span class="muted">+${it.enh} / +${G.maxEnh} · 단계당 기본 능력치 +8%</span></div>
+    <button class="btn" style="width:100%" data-act="enh" data-uid="${uid}" ${maxE ? 'disabled' : ''}>${maxE ? '최대 강화' : `강화 (스톤 ${ec} · 골드 ${fmt(eg)} · 성공률 ${rate}%)`}</button>`;
+  h += `<details style="margin-top:10px"><summary class="muted">확률 정보 (상시 공개)</summary>${probTables()}</details>`;
+  h += `<div class="mbtns"><button class="btn" data-act="dis" data-uid="${uid}" ${eq ? 'disabled' : ''}>분해 (스톤 +${G.dis})</button><button class="btn pri" data-act="${eq ? 'unequip' : 'equip'}" data-uid="${uid}">${eq ? '해제' : '장착'}</button><button class="btn" data-act="close">닫기</button></div>`;
+  showModal(h);
+}
+/* --- upgrade --- */
+function renderUpg() {
+  const st = computeStats(); let h = `<div class="card"><h3>기본 강화<small>골드 사용</small></h3>`;
+  for (const k of ['atk', 'hp', 'def']) {
+    const U = UPG[k], l = S.upg[k], c = U.cost(l);
+    h += `<div class="upg"><div class="ui"><b>${U.name}</b> <span class="muted">Lv.${l}</span><div>현재 +${fmt(U.val(l))} → 다음 +${fmt(U.val(l + 1))}</div></div><button class="btn sm ${S.gold < c ? 'off' : 'pri'}" data-act="upg" data-k="${k}" data-n="1"><i class="ic gold"></i> ${fmt(c)}</button><button class="btn sm ${S.gold < c ? 'off' : ''}" data-act="upg" data-k="${k}" data-n="10">x10</button></div>`;
+  }
+  h += `</div><div class="card"><h3>${TECH[S.tech].name} 능력치<small>전투력 ${fmt(powerOf(st))}</small></h3><div class="statgrid">
+    <div><span>공격력</span>${fmt(st.atk)}</div><div><span>최대 체력</span>${fmt(st.maxHp)}</div><div><span>방어력</span>${fmt(st.def)}</div><div><span>이동 속도</span>${Math.round(st.spd)}</div>
+    <div><span>치명타 확률</span>${(st.critC * 100).toFixed(1)}%</div><div><span>치명타 피해</span>${(st.critD * 100).toFixed(0)}%</div><div><span>공격 속도</span>${(st.aspd * 100).toFixed(0)}%</div><div><span>스킬 쿨감</span>${(st.cdr * 100).toFixed(0)}%</div>
+    <div><span>받는 피해 감소</span>${(st.dr * 100).toFixed(0)}%</div><div><span>스킬 피해</span>${(st.skillDmg * 100).toFixed(0)}%</div><div><span>반사</span>${(st.reflect * 100).toFixed(0)}%</div><div><span>골드 획득</span>+${(st.goldP * 100).toFixed(0)}%</div></div></div>`;
+  return h;
+}
+/* --- mission --- */
+function attendNext() { const a = S.attend; if (a.last === ymd()) return { idx: (a.streak - 1) % 7, claimed: true }; if (a.last === yesterday()) return { idx: a.streak % 7, claimed: false }; return { idx: 0, claimed: false }; }
+function renderMission() {
+  const an = attendNext();
+  let h = `<div class="card"><h3>출석 보상<small>연속 ${S.attend.last === ymd() || S.attend.last === yesterday() ? S.attend.streak : 0}일</small></h3><div class="att">${ATTEND.map((r, i) => `<div class="${i < an.idx || (an.claimed && i === an.idx) ? 'done' : ''} ${i === an.idx && !an.claimed ? 'now' : ''}"><b>${i + 1}일</b>${r.t}</div>`).join('')}</div>
+    <button class="btn pri" style="width:100%;margin-top:10px" data-act="attend" ${an.claimed ? 'disabled' : ''}>${an.claimed ? '오늘 출석 완료' : '출석 보상 받기'}</button></div>`;
+  h += `<div class="card"><h3>일일 퀘스트<small>매일 0시 초기화</small></h3>`;
+  for (const q of DAILY) { const v = Math.min(q.goal, S.daily[q.id] || 0), done = v >= q.goal, cl = S.daily.claimed[q.id]; h += `<div class="q"><div class="qi">${q.name}<small>보상: ${rewardText(q.r)}</small><div class="qbar"><i style="width:${v / q.goal * 100}%"></i></div></div><span class="muted">${v}/${q.goal}</span><button class="btn sm ${done && !cl ? 'pri' : ''}" data-act="quest" data-id="${q.id}" ${!done || cl ? 'disabled' : ''}>${cl ? '완료' : '받기'}</button></div>`; }
+  const allDone = DAILY.every(q => S.daily.claimed[q.id]);
+  h += `<div class="q"><div class="qi"><b>일일 퀘스트 모두 완료</b><small>보상: 다이아 50</small></div><button class="btn sm ${allDone && !S.daily.claimed.all ? 'pri' : ''}" data-act="quest" data-id="all" ${!allDone || S.daily.claimed.all ? 'disabled' : ''}>${S.daily.claimed.all ? '완료' : '받기'}</button></div></div>`;
+  h += `<div class="card"><h3>주간 보스 레이드<small>입장권 ${S.raid.tickets} / ${CONFIG.raidTickets} · 매주 월요일 충전</small></h3><div class="muted">특수 보스 <b style="color:#fff">세계수의 그림자</b>에게 60초 동안 최대 피해를 입히세요. 피해량에 비례한 고배율 보상 + 영웅 장비 확정 + 전설 장비 확률 ${CONFIG.drop.raidLegend}%<br>최고 기록: ${fmt(S.raid.best)}</div>
+    <button class="btn pri" style="width:100%;margin-top:10px" data-act="raid" ${S.raid.tickets <= 0 || S.cleared < 9 ? 'disabled' : ''}>${S.cleared < 9 ? '챕터 1 클리어 후 개방' : S.raid.tickets <= 0 ? '이번 주 입장권 소진' : '레이드 입장'}</button></div>`;
+  h += `<div class="card ph"><h3>기간 한정 이벤트<small>추후 확장</small></h3><div class="muted">테크별 스페셜 스테이지 및 한정 드랍 (기획서 12p)</div></div>
+    <div class="card ph"><h3>길드<small>추후 확장</small></h3><div class="muted">길드 보스 레이드 · 순위 경쟁 · PVP 검토 (서버 필요)</div></div>`;
+  return h;
+}
+/* --- shop --- */
+function renderShop() {
+  const v = vipLevel();
+  let h = `<div class="card"><h3>다이아 상점<small>프로토타입: 실제 결제 없음</small></h3>${PACKS.map(p => `<div class="pack">${!S.shop.firstBuy ? '<span class="badge">첫 결제 2배</span>' : ''}<i class="ic dia" style="width:22px;height:22px"></i><div class="pi"><b>다이아 ${fmt(p.dia)}${!S.shop.firstBuy ? ` → ${fmt(p.dia * 2)}` : ''}</b><div>VIP 누적 +₩${fmt(p.price)}</div></div><button class="btn pri sm" data-act="buy" data-id="${p.id}">₩${fmt(p.price)}</button></div>`).join('')}</div>`;
+  h += `<div class="card"><h3>VIP ${v}<small>누적 ₩${fmt(S.shop.spent)}</small></h3><div class="muted">VIP 등급마다 방치 보상 상한 +1시간 (현재 ${idleCap()}시간)${v < VIP_STEPS.length - 1 ? `<br>다음 등급까지 ₩${fmt(VIP_STEPS[v + 1] - S.shop.spent)}` : ''}</div></div>`;
+  h += `<div class="card"><h3>광고 보상<small>오늘 ${S.daily.ads || 0} / 5</small></h3><div class="row"><div class="muted" style="flex:1">자발적 시청 · 다이아 10 지급 (시뮬레이션)</div><button class="btn sm" data-act="adDia" ${(S.daily.ads || 0) >= 5 ? 'disabled' : ''}>광고 보기</button></div></div>`;
+  h += `<div class="card"><h3>쿠폰 입력<small>이벤트 · CS 코드</small></h3><div class="row"><input class="coupon" id="coupon" placeholder="쿠폰 코드" maxlength="20"><button class="btn pri" data-act="coupon">입력</button></div><div class="muted" style="margin-top:6px">테스트 코드: DRUID2026 · HUNTERS · WELCOME</div></div>`;
+  h += `<div class="card ph"><h3>시즌 패스 · 테크별 코스튬<small>추후 확장</small></h3><div class="muted">무료/유료 트랙 · 전투력 영향 없는 외형 스킨 (기획서 13p)</div></div>`;
+  h += `<div class="card"><h3>확률 정보<small>상시 공개</small></h3>${probTables()}</div>`;
+  h += `<div class="card"><h3>개발자 도구<small>기획 검증용</small></h3><div class="row" style="flex-wrap:wrap">
+    <button class="btn sm" data-act="dev" data-k="idle">방치 +1시간</button><button class="btn sm" data-act="dev" data-k="idle8">방치 +10시간</button><button class="btn sm" data-act="dev" data-k="gold">골드 +10만</button><button class="btn sm" data-act="dev" data-k="stone">스톤 +500</button>
+    <button class="btn sm" data-act="dev" data-k="dia">다이아 +1000</button><button class="btn sm" data-act="dev" data-k="sp">SP +10</button><button class="btn sm" data-act="dev" data-k="ch">챕터 1개 클리어 처리</button><button class="btn sm" data-act="dev" data-k="legend">전설 장비 지급</button><button class="btn sm" data-act="dev" data-k="ticket">레이드 입장권 충전</button>
+    <button class="btn sm" style="color:#ff8a8a" data-act="dev" data-k="reset">저장 데이터 초기화</button></div><div class="muted" style="margin-top:6px">진행 상황은 이 브라우저(localStorage)에 자동 저장돼요</div></div>`;
+  return h;
+}
+function fakeAd(cb) {
+  let n = 3; showModal(`<h2>광고 시청 중</h2><div class="sub">프로토타입 시뮬레이션</div><div class="lore" id="adc">${n}</div>`, { closable: false });
+  const t = setInterval(() => { n--; const el = $('#adc'); if (el) el.textContent = n; if (n <= 0) { clearInterval(t); closeModal(); cb(); } }, 1000);
+}
+function showOffline() {
+  const p = idlePending(); if (S.cleared < 0 || p.gold <= 0) return;
+  const comeback = p.el >= CONFIG.idle.comebackHours;
+  showModal(`<h2>오프라인 요약</h2><div class="sub">자리를 비운 ${hm(p.el)} 동안 드루이드가 사냥했어요 (상한 ${p.cap}시간)</div>
+    <div class="rw"><div><span>처치 몬스터</span>${fmt(p.kills)}</div><div><span>골드</span><i class="ic gold"></i>${fmt(p.gold)}</div><div><span>스톤</span><i class="ic stone"></i>${fmt(p.stone)}</div><div><span>EXP</span>${fmt(p.exp)}</div></div>
+    ${p.over > 0 ? `<div class="msgs"><div>상한 초과 ${hm(p.over)}분 보상 (골드 ${fmt(p.oGold)} · 스톤 ${fmt(p.oStone)})은 광고 또는 다이아 ${CONFIG.idle.overflowDia}로 수령 가능</div></div>` : ''}
+    ${comeback ? `<div class="msgs"><div>복귀 부스터! 오랜만에 오셨네요, 이번 수령은 광고 없이 2배</div></div>` : ''}
+    <div class="mbtns"><button class="btn" data-act="idleClaim" data-m="${comeback ? 2 : 1}">수령</button><button class="btn pri" data-act="idleAd">광고 보고 ${CONFIG.idle.adMult}배${p.over > 0 ? ' + 초과분' : ''}</button></div>
+    ${p.over > 0 ? `<button class="btn dia" style="width:100%;margin-top:8px" data-act="idleDia">다이아 ${CONFIG.idle.overflowDia}로 초과분까지 즉시 수령</button>` : ''}`);
+}
+
+/* ---------- actions ---------- */
+ACT = {
+  tab(d) { if (S.tut === 1 && d.tab !== 'tree') return; UI.tab = d.tab; if (d.tab === 'tree') UI.treeTech = S.tech; renderLobby(); $('#content').scrollTop = 0; },
+  tech(d) { if (!techUnlocked(d.id)) { toast(`${TECH[d.id].name}: 챕터 ${TECH[d.id].unlockCh} 클리어 시 해금`); return; } S.tech = d.id; save(); renderLobby(); toast(`${TECH[d.id].name}로 전환 (스테이지 진입 전에만 변경 가능)`); },
+  ch(d) { S.sel.ch = clamp(S.sel.ch + +d.d, 1, CONFIG.maxChapter); const mx = S.cleared + 1; if (stageG(S.sel.ch, S.sel.st) > mx) { const c = gToCS(Math.min(mx, CONFIG.maxChapter * 10 - 1)); S.sel.st = c.ch === S.sel.ch ? c.st : 1; } renderLobby(); },
+  stage(d) { const ch = +d.ch, st = +d.st; if (stageG(ch, st) > S.cleared + 1) { toast('이전 스테이지를 먼저 클리어하세요'); return; } S.sel = { ch, st }; renderLobby(); },
+  start() { const g = stageG(S.sel.ch, S.sel.st); if (g > S.cleared + 1) { toast('이전 스테이지를 먼저 클리어하세요'); return; } startBattle({ ch: S.sel.ch, st: S.sel.st }); },
+  sweep() {
+    if (S.dia < CONFIG.sweepDia) { toast('다이아가 부족해요'); return; }
+    S.dia -= CONFIG.sweepDia; const ch = S.sel.ch, st = S.sel.st, g = stageG(ch, st), typ = stageType(st), kills = 20 + st * 3, msgs = [];
+    const m = typ === 'boss' ? 40 : typ === 'mid' ? 10 : 0;
+    const r = { gold: goldPerKill(g) * (kills + 15 + m), exp: expPerKill(g) * (kills + 10 + m), stone: typ === 'boss' ? 15 + ch * 5 : typ === 'mid' ? 5 + ch * 2 : 1 };
+    grant(r, msgs); let gr = rollNormalDrop(); if (typ === 'mid') gr = Math.max(1, gr); if (typ === 'boss') gr = Math.max(2, gr);
+    if (gr >= 0) { const it = makeItem(gr, g, ch - 1); if (addItem(it, msgs)) msgs.push(`[${GRADES[gr].name}] ${itemName(it)} 획득`); }
+    S.daily.kills += kills; S.daily.clears++; save(); toast(`${ch}-${st} 소탕 완료: 골드 ${fmt(r.gold)} · 스톤 ${r.stone}`); msgs.forEach(x => toast(x)); renderLobby();
+  },
+  toggle(d) { S.settings[d.k] = !S.settings[d.k]; if (d.k === 'repeat' && S.settings.repeat) S.settings.autoNext = true; save(); renderLobby(); },
+  idle() { const p = idlePending(); if (p.gold <= 0 && p.stone <= 0) { toast('아직 쌓인 보상이 없어요'); return; } showOffline(); },
+  idleClaim(d) { claimIdle(+d.m || 1, false); },
+  idleAd() { fakeAd(() => claimIdle(CONFIG.idle.adMult, true)); },
+  idleDia() { if (S.dia < CONFIG.idle.overflowDia) { toast('다이아가 부족해요'); return; } S.dia -= CONFIG.idle.overflowDia; claimIdle(1, true); },
+  ttech(d) { UI.treeTech = d.id; UI.node = 'core'; renderLobby(); },
+  node(d) { UI.node = d.id; renderLobby(); },
+  invest() {
+    const tech = UI.treeTech || S.tech, n = TREES[tech].find(x => x.id === UI.node), l = S.trees[tech][n.id] || 0, c = nodeCost(n, l);
+    if (!techUnlocked(tech) || l >= n.max || !reqMet(tech, n) || S.sp < c.sp || S.gold < c.gold || S.stone < c.stone) return;
+    S.sp -= c.sp; S.gold -= c.gold; S.stone -= c.stone; S.trees[tech][n.id] = l + 1;
+    if (S.tut === 1) { S.tut = 2; UI.tab = 'home'; toast('좋아요! 스킬트리 성장 완료. 이제 사냥을 이어가세요'); }
+    else toast(`${n.name} Lv.${l + 1}${n.skill != null ? ' · 스킬 해금!' : ''}`);
+    save(); renderLobby();
+  },
+  respec() {
+    const tech = UI.treeTech || S.tech, spent = TREES[tech].reduce((a, n) => a + (S.trees[tech][n.id] || 0) * nodeCost(n, 0).sp, 0);
+    if (!spent) { toast('초기화할 노드가 없어요'); return; }
+    showModal(`<h2>스킬트리 초기화</h2><div class="sub">${TECH[tech].name} 트리를 초기화하고 스킬포인트 ${spent}를 돌려받아요</div><div class="muted" style="text-align:center">비용: ${S.freeRespec ? '무료 (1회)' : '다이아 ' + CONFIG.respecDia}<br>골드·스톤은 환급되지 않아요</div><div class="mbtns"><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="respecOk">초기화</button></div>`);
+  },
+  respecOk() {
+    const tech = UI.treeTech || S.tech; if (!S.freeRespec) { if (S.dia < CONFIG.respecDia) { toast('다이아가 부족해요'); return; } S.dia -= CONFIG.respecDia; } else S.freeRespec = false;
+    const spent = TREES[tech].reduce((a, n) => a + (S.trees[tech][n.id] || 0) * nodeCost(n, 0).sp, 0); S.sp += spent; S.trees[tech] = {}; save(); closeModal(); renderLobby(); toast(`초기화 완료 · 스킬포인트 ${spent} 환급`);
+  },
+  item(d) { showItem(+d.uid); },
+  close() { closeModal(); },
+  equip(d) { const it = itemById(+d.uid); S.equip[it.slot] = it.uid; save(); closeModal(); renderLobby(); toast('장착 완료'); },
+  unequip(d) { const it = itemById(+d.uid); S.equip[it.slot] = null; save(); closeModal(); renderLobby(); },
+  lock(d) { const it = itemById(+d.uid), o = it.opts[+d.i]; if (!o.lock && it.opts.filter(x => !x.lock).length <= 1) { toast('모든 옵션을 고정할 수는 없어요'); return; } o.lock = !o.lock; save(); showItem(it.uid); },
+  reroll(d) {
+    const it = itemById(+d.uid), locks = it.opts.filter(o => o.lock).length;
+    if (d.c === 'stone') { const c = CONFIG.reroll.stone + locks * CONFIG.reroll.lockStone; if (S.stone < c) { toast('스톤이 부족해요'); return; } S.stone -= c; }
+    else { const c = CONFIG.reroll.dia + locks * CONFIG.reroll.lockDia; if (S.dia < c) { toast('다이아가 부족해요'); return; } S.dia -= c; }
+    const free = it.opts.filter(o => !o.lock); free.forEach(o => { o.key = pick(OPT_KEYS); o.tier = rollTier(); });
+    S.pity++;
+    if (free.some(o => o.tier === 3)) S.pity = 0;
+    else if (S.pity >= CONFIG.pity) { pick(free).tier = 3; S.pity = 0; toast('천장 발동! 최상급 옵션 확정'); }
+    const best = Math.max(...free.map(o => o.tier)); if (best >= 1) toast(`${CONFIG.optTiers[best].name} 옵션 등장!`);
+    S.daily.growth = 1; save(); showItem(it.uid); renderTop();
+  },
+  enh(d) {
+    const it = itemById(+d.uid), ec = 2 + it.enh * 2, eg = 100 * (it.enh + 1), rate = Math.max(40, 100 - it.enh * 5);
+    if (it.enh >= GRADES[it.grade].maxEnh) return; if (S.stone < ec) { toast('스톤이 부족해요'); return; } if (S.gold < eg) { toast('골드가 부족해요'); return; }
+    S.stone -= ec; S.gold -= eg; S.daily.growth = 1;
+    if (Math.random() * 100 < rate) { it.enh++; toast(`강화 성공! +${it.enh}`); } else toast('강화 실패... 재료만 소모됐어요');
+    save(); showItem(it.uid); renderTop();
+  },
+  dis(d) { const it = itemById(+d.uid); if (SLOTS.some(s => S.equip[s] === it.uid)) return; S.inv = S.inv.filter(x => x !== it); const g = GRADES[it.grade].dis + Math.floor(it.enh / 2); S.stone += g; save(); closeModal(); renderLobby(); toast(`분해 완료 · 스톤 +${g}`); },
+  disall() { const eqs = new Set(SLOTS.map(s => S.equip[s])); const tgt = S.inv.filter(i => i.grade === 0 && !eqs.has(i.uid)); if (!tgt.length) { toast('분해할 일반 장비가 없어요'); return; } S.inv = S.inv.filter(i => !tgt.includes(i)); S.stone += tgt.length * GRADES[0].dis; save(); renderLobby(); toast(`일반 장비 ${tgt.length}개 분해 · 스톤 +${tgt.length}`); },
+  autoequip() {
+    let changed = 0;
+    for (const s of SLOTS) { let best = S.equip[s], bp = powerOf(computeStats()); for (const it of S.inv.filter(i => i.slot === s)) { const c = Object.assign({}, S.equip, { [s]: it.uid }), p = powerOf(computeStats(null, c)); if (p > bp) { bp = p; best = it.uid; } } if (best !== S.equip[s]) { S.equip[s] = best; changed++; } }
+    save(); renderLobby(); toast(changed ? `${changed}개 부위 교체 · 전투력 ${fmt(curPower())}` : '이미 최적 장비를 착용 중이에요');
+  },
+  probs() { showModal(`<h2>확률 정보</h2><div class="sub">확률형 아이템 정보 상시 공개</div>${probTables()}<div class="mbtns"><button class="btn" data-act="close">닫기</button></div>`); },
+  upg(d) { let n = +d.n, done = 0; while (n-- > 0) { const c = UPG[d.k].cost(S.upg[d.k]); if (S.gold < c) break; S.gold -= c; S.upg[d.k]++; done++; } if (!done) { toast('골드가 부족해요'); return; } save(); renderLobby(); },
+  attend() {
+    const an = attendNext(); if (an.claimed) return; S.attend.streak = S.attend.last === yesterday() ? S.attend.streak + 1 : 1; S.attend.last = ymd();
+    const r = ATTEND[(S.attend.streak - 1) % 7], msgs = []; grant(r, msgs); save(); renderLobby(); toast(`출석 ${S.attend.streak}일차 보상: ${r.t}`); msgs.forEach(m => toast(m));
+  },
+  quest(d) {
+    if (d.id === 'all') { if (S.daily.claimed.all || !DAILY.every(q => S.daily.claimed[q.id])) return; S.daily.claimed.all = true; grant({ dia: 50 }); toast('보상 수령: 다이아 50'); }
+    else { const q = DAILY.find(x => x.id === d.id); if ((S.daily[q.id] || 0) < q.goal || S.daily.claimed[q.id]) return; S.daily.claimed[q.id] = true; grant(q.r); toast('보상 수령: ' + rewardText(q.r)); }
+    save(); renderLobby();
+  },
+  raid() { if (S.raid.tickets <= 0 || S.cleared < 9) return; S.raid.tickets--; save(); startBattle({ raid: true }); },
+  buy(d) {
+    const p = PACKS.find(x => x.id === d.id), dia = p.dia * (S.shop.firstBuy ? 1 : 2);
+    showModal(`<h2>구매 시뮬레이션</h2><div class="sub">프로토타입이라 실제 결제는 일어나지 않아요</div><div class="lore">다이아 ${fmt(dia)} ${!S.shop.firstBuy ? '(첫 결제 2배)' : ''}<br>₩${fmt(p.price)}</div><div class="mbtns"><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="buyOk" data-id="${p.id}">구매(가상)</button></div>`);
+  },
+  buyOk(d) { const p = PACKS.find(x => x.id === d.id), dia = p.dia * (S.shop.firstBuy ? 1 : 2), v0 = vipLevel(); S.dia += dia; S.shop.firstBuy = true; S.shop.spent += p.price; save(); closeModal(); renderLobby(); toast(`다이아 ${fmt(dia)} 지급`); if (vipLevel() > v0) toast(`VIP ${vipLevel()} 달성! 방치 보상 상한 ${idleCap()}시간`); },
+  adDia() { if ((S.daily.ads || 0) >= 5) return; fakeAd(() => { S.daily.ads = (S.daily.ads || 0) + 1; S.dia += 10; save(); renderLobby(); toast('다이아 10 지급'); }); },
+  coupon() {
+    const code = ($('#coupon').value || '').trim().toUpperCase(), c = COUPONS[code];
+    if (!c) { toast('유효하지 않은 쿠폰 코드예요'); return; } if (S.coupons[code]) { toast('이미 사용한 쿠폰이에요'); return; }
+    S.coupons[code] = true; const msgs = []; grant(c, msgs); save(); renderLobby(); toast(`쿠폰 사용: ${c.label}`); msgs.forEach(m => toast(m));
+  },
+  dev(d) {
+    const k = d.k;
+    if (k === 'idle') S.idleAt -= 3600000; else if (k === 'idle8') S.idleAt -= 36000000;
+    else if (k === 'gold') S.gold += 100000; else if (k === 'stone') S.stone += 500; else if (k === 'dia') S.dia += 1000; else if (k === 'sp') S.sp += 10;
+    else if (k === 'ch') { const before = S.cleared; S.cleared = Math.min(CONFIG.maxChapter * 10 - 1, Math.floor((S.cleared + 1) / 10) * 10 + 9); if (before < 0) S.idleAt = Date.now(); if (S.tut < 3) S.tut = 3; TECH_ORDER.forEach(id => { if (TECH[id].unlockCh > 0 && TECH[id].unlockCh * 10 - 1 > before && techUnlocked(id)) toast(`새 테크 해금: ${TECH[id].name}`); }); }
+    else if (k === 'legend') { const it = makeItem(3, Math.max(0, S.cleared)); addItem(it); toast(`[전설] ${itemName(it)} 지급`); }
+    else if (k === 'ticket') S.raid.tickets = CONFIG.raidTickets;
+    else if (k === 'reset') { showModal(`<h2>데이터 초기화</h2><div class="sub">모든 진행 상황이 삭제돼요</div><div class="mbtns"><button class="btn" data-act="close">취소</button><button class="btn pri" data-act="resetOk">초기화</button></div>`); return; }
+    save(); renderLobby(); if (k.startsWith('idle')) toast('방치 시간 경과 처리 · 사냥 탭에서 수령하세요');
+  },
+  resetOk() { localStorage.removeItem(SAVE_KEY); location.reload(); },
+  pause() { togglePause(); }, resume() { togglePause(); },
+  giveup() { if (!B) return; if (B.raid) { B.paused = false; closeModal(); B.raidLeft = 0; return; } B.paused = false; closeModal(); endBattle(false); },
+  hauto() { S.settings.auto = !S.settings.auto; save(); $('#hAuto').classList.toggle('on', S.settings.auto); toast(S.settings.auto ? '자동 전투 ON · 이동/스킬 자동, 직접 조작하면 즉시 수동' : '자동 전투 OFF'); },
+  hspeed() { S.settings.speed = S.settings.speed === 1 ? 2 : 1; save(); $('#hSpd').textContent = 'x' + S.settings.speed; $('#hSpd').classList.toggle('on', S.settings.speed > 1); },
+  skill() { },
+  'res-retry'() { if (B && B.autoTimer) clearInterval(B.autoTimer); const o = { ch: B.ch, st: B.st }; closeModal(); startBattle(o); },
+  'res-next'() { if (B && B.autoTimer) clearInterval(B.autoTimer); const g = B.g + 1; if (g > S.cleared + 1) { ACT['res-retry'](); return; } const c = gToCS(g); S.sel = c; closeModal(); startBattle(c); },
+  'res-lobby'() { leaveBattle(); },
+  intro() { startBattle({ ch: 1, st: 1 }); },
+};
+
+/* ---------- main loop ---------- */
+let last = performance.now(), idleTick = 0;
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (B) { if (!B.paused) { const n = S.settings.speed || 1; for (let i = 0; i < n; i++) update(dt); } render(now); hudUpdate(); }
+  else if (UI.tab === 'home') { drawPreview(now / 1000); if (now - idleTick > 1000) { idleTick = now; const el = $('#idleBox'); if (el) el.innerHTML = idleBoxHtml(); } }
+  requestAnimationFrame(loop);
+}
+function boot() {
+  load(); resize();
+  const away = Date.now() - S.lastSeen;
+  refreshPeriodic(); renderLobby();
+  if (S.tut === 0) {
+    showModal(`<h2 style="color:${TECH.beast.color}">드루이드 헌터즈</h2><div class="sub">사냥 × 육성 하이브리드 방치형 RPG · 프로토타입</div>
+      <div class="lore">자연의 힘을 빌려 형태를 바꾸는 드루이드.<br>타락한 숲을 되찾기 위해, 첫 번째 형태 <b style="color:${TECH.beast.color}">짐승</b>으로 사냥을 시작한다.</div>
+      <div class="mbtns"><button class="btn" data-act="intro">건너뛰기</button><button class="btn pri" data-act="intro">사냥 시작</button></div>`, { closable: false });
+  } else if (S.tut === 1) { UI.tab = 'tree'; UI.treeTech = 'beast'; renderLobby(); }
+  else if (away > 60000) showOffline();
+  setInterval(() => { if (!B) save(); }, 10000);
+  addEventListener('beforeunload', save);
+  requestAnimationFrame(loop);
+}
+boot();
+</script>
+</body>
+</html>
